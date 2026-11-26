@@ -227,7 +227,7 @@ export class Sessie {
       if (r && this.heeftToegang(r.id)) k.push({ ruimte: r, label, uitleg });
     };
     if (this.isBegeleider) {
-      voeg(this.ruimte('team'), 'Leefgroep (begeleiders)', 'Alle begeleiders zien dit.');
+      voeg(this.ruimte('team'), 'Team (begeleiders)', 'Alle begeleiders zien dit.');
       voeg(this.ruimte('gedeeld'), 'Gedeeld met iedereen', 'Begeleiders én jongeren van de leefgroep zien dit.');
       for (const j of this.jongeren()) {
         voeg(this.ruimte('begeleiding', j.id), `Voor ${j.initialen}`, `${j.initialen} en de begeleiders zien dit.`);

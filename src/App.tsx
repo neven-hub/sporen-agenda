@@ -260,7 +260,7 @@ function soortLabel(r: Ruimte, sessie: Sessie): string {
     case 'gedeeld':
       return 'Gedeeld';
     case 'team':
-      return 'Leefgroep';
+      return 'Team';
     case 'prive':
       return 'Privé';
     case 'begeleiding':
@@ -325,7 +325,7 @@ function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void
   const filters: [Filter, string][] = sessie.isBegeleider
     ? [
         ['alles', 'Alles'],
-        ['team', 'Leefgroep'],
+        ['team', 'Team'],
         ['gedeeld', 'Gedeeld'],
         ...sessie.jongeren().map((j) => [`jongere:${j.id}`, j.initialen] as [Filter, string]),
         ['prive', 'Privé'],
@@ -512,7 +512,7 @@ function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void
 function Legende({ sessie }: { sessie: Sessie }) {
   const items: [Ruimte['soort'], string][] = sessie.isBegeleider
     ? [
-        ['team', 'Leefgroep: alleen begeleiders'],
+        ['team', 'Team: alleen begeleiders'],
         ['begeleiding', 'Jongere + begeleiders'],
         ['gedeeld', 'Gedeeld: iedereen'],
         ['prive', 'Privé: alleen jij'],

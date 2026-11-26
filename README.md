@@ -10,7 +10,7 @@ op **privé**: dan ziet niemand anders het, ook de begeleiders niet.
 | Ik en de begeleiding      |      ✓       |                 |      ✓      |
 | Alleen ik (privé)         |      ✓       |                 |             |
 | Gedeeld (bv. bewonersverg.)|     ✓       |        ✓        |      ✓      |
-| Leefgroep (begeleiders)   |              |                 |      ✓      |
+| Team (begeleiders)        |              |                 |      ✓      |
 
 Een begeleider kan ook iets plannen "voor Jo": dan zien Jo en de begeleiders het.
 
