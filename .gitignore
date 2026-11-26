@@ -7,3 +7,7 @@ dist/
 *.tsbuildinfo
 # Nooit echte agendagegevens of exports in git
 *.json.export
+
+# Supabase CLI (koppeling, lokale cache)
+supabase/.temp/
+supabase/.branches/

@@ -11,7 +11,8 @@
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "rooktest": "node --env-file=.env.local scripts/rooktest.mjs"
+    "rooktest": "node --env-file=.env.local scripts/rooktest.mjs",
+    "schema:supabase": "supabase db query --remote -f supabase/schema.sql"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",
@@ -24,6 +25,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.0",
+    "supabase": "^3.4.0",
     "typescript": "~5.9.3",
     "vite": "^8.0.0",
     "vitest": "^4.1.0"
