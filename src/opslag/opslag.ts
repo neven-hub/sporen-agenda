@@ -42,6 +42,19 @@ export interface Opslag {
   afspraken(ruimteIds: string[]): Promise<AfspraakRij[]>;
   bewaarAfspraak(rij: Omit<AfspraakRij, 'id'> & { id?: string }): Promise<AfspraakRij>;
   verwijderAfspraak(id: string): Promise<void>;
+
+  // ── Beheer van accounts ──
+  /** Begeleider maakt een herstelcode voor iemand die zijn wachtwoord vergat (24 uur geldig). */
+  maakHerstelcode(profielId: string): Promise<string>;
+  /**
+   * Zonder aanmelden: nieuw wachtwoord en nieuwe sleutels met een herstelcode.
+   * De oude toegang en de privé-afspraken vervallen. Geeft de gebruikersnaam terug.
+   */
+  gebruikHerstelcode(code: string, wachtwoord: string, materiaal: NieuwProfielMetCode): Promise<string>;
+  /** Wachtwoord wijzigen (controleert het oude) en de private sleutel opnieuw inpakken. */
+  wijzigWachtwoord(oud: string, nieuw: string, materiaal: Pick<Profiel, 'priveSleutel' | 'zout'>): Promise<void>;
+  /** Begeleider verwijdert een lid: account, profiel, eigen agenda's en sleutels. */
+  verwijderLid(profielId: string): Promise<void>;
 }
 
 export class OpslagFout extends Error {}

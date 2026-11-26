@@ -12,8 +12,32 @@ function foutTekst(e: unknown): string {
   return e instanceof Error ? e.message : 'Er ging iets mis.';
 }
 
+const AFMELDEN_NA_MINUTEN = 15;
+
 export default function App() {
   const [sessie, setSessie] = useState<Sessie | null>(null);
+  const [melding, setMelding] = useState<string | null>(null);
+
+  // Automatisch afmelden na een tijd zonder activiteit (gedeelde pc in het bureau).
+  useEffect(() => {
+    if (!sessie) return;
+    let klok = 0;
+    const herstart = () => {
+      window.clearTimeout(klok);
+      klok = window.setTimeout(async () => {
+        await sessie.meldAf();
+        setSessie(null);
+        setMelding(`Je bent afgemeld na ${AFMELDEN_NA_MINUTEN} minuten zonder activiteit.`);
+      }, AFMELDEN_NA_MINUTEN * 60 * 1000);
+    };
+    const gebeurtenissen = ['pointerdown', 'keydown', 'scroll', 'touchstart'];
+    gebeurtenissen.forEach((g) => window.addEventListener(g, herstart, { passive: true }));
+    herstart();
+    return () => {
+      window.clearTimeout(klok);
+      gebeurtenissen.forEach((g) => window.removeEventListener(g, herstart));
+    };
+  }, [sessie]);
   return (
     <div className="ag">
       <div className="sp-kleurbalk" />
@@ -22,16 +46,26 @@ export default function App() {
           Demo: verzonnen leefgroep, alles blijft in deze browser. Er gaat niets naar een server.
         </div>
       )}
-      {sessie ? <Agenda sessie={sessie} onAfmelden={() => setSessie(null)} /> : <Aanmelden onSessie={setSessie} />}
+      {sessie ? (
+        <Agenda sessie={sessie} onAfmelden={() => setSessie(null)} />
+      ) : (
+        <Aanmelden
+          melding={melding}
+          onSessie={(s) => {
+            setMelding(null);
+            setSessie(s);
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // ── Aanmelden ────────────────────────────────────────────────────────────────
 
-type AanmeldTab = 'aanmelden' | 'code' | 'start';
+type AanmeldTab = 'aanmelden' | 'code' | 'start' | 'herstel';
 
-function Aanmelden({ onSessie }: { onSessie: (s: Sessie) => void }) {
+function Aanmelden({ onSessie, melding }: { onSessie: (s: Sessie) => void; melding?: string | null }) {
   const [tab, setTab] = useState<AanmeldTab>('aanmelden');
   const [naam, setNaam] = useState('');
   const [ww, setWw] = useState('');
@@ -63,6 +97,7 @@ function Aanmelden({ onSessie }: { onSessie: (s: Sessie) => void }) {
     }
     if (tab === 'aanmelden') doe('Aanmelden en sleutels openen…', () => Sessie.meldAan(opslag, naam, ww));
     if (tab === 'code') doe('Account maken en sleutels aanmaken…', () => Sessie.registreerMetCode(opslag, naam, ww, code));
+    if (tab === 'herstel') doe('Nieuw wachtwoord en nieuwe sleutels maken…', () => Sessie.herstel(opslag, code, ww));
     if (tab === 'start')
       doe('Leefgroep maken…', () => Sessie.startLeefgroep(opslag, naam, ww, lgNaam.trim(), initialen.trim(), startcode.trim()));
   }
@@ -119,6 +154,7 @@ function Aanmelden({ onSessie }: { onSessie: (s: Sessie) => void }) {
             ['aanmelden', 'Aanmelden'],
             ['code', 'Ik heb een code'],
             ['start', 'Nieuwe leefgroep'],
+            ['herstel', 'Wachtwoord vergeten'],
           ] as const
         ).map(([t, l]) => (
           <button
@@ -136,7 +172,20 @@ function Aanmelden({ onSessie }: { onSessie: (s: Sessie) => void }) {
         ))}
       </div>
 
+      {melding && <p className="sp-melding sp-melding--let-op ag-boven">{melding}</p>}
+
       <form className="ag-formulier" onSubmit={verstuur}>
+        {tab === 'herstel' && (
+          <>
+            <p className="ag-zacht ag-geen-marge">
+              Vraag een begeleider om een herstelcode en kies een nieuw wachtwoord. Je gewone en gedeelde afspraken komen terug zodra een
+              begeleider je opnieuw toegang geeft. Je privé-afspraken zijn helaas weg.
+            </p>
+            <Veld label="Herstelcode">
+              <input className="sp-invoer" value={code} onChange={(e) => setCode(e.target.value)} required placeholder="ABCD-EFGH-JKMN" autoCapitalize="characters" />
+            </Veld>
+          </>
+        )}
         {tab === 'code' && (
           <Veld label="Uitnodigingscode" hulp="Die kreeg je van een begeleider.">
             <input className="sp-invoer" value={code} onChange={(e) => setCode(e.target.value)} required placeholder="ABCD-EFGH" autoCapitalize="characters" />
@@ -157,10 +206,12 @@ function Aanmelden({ onSessie }: { onSessie: (s: Sessie) => void }) {
             )}
           </>
         )}
-        <Veld label="Gebruikersnaam" hulp={tab === 'aanmelden' ? undefined : 'Kies iets zonder je volledige naam, bv. ro-studio3.'}>
-          <input className="sp-invoer" value={naam} onChange={(e) => setNaam(e.target.value)} required autoComplete="username" autoCapitalize="none" />
-        </Veld>
-        <Veld label="Wachtwoord">
+        {tab !== 'herstel' && (
+          <Veld label="Gebruikersnaam" hulp={tab === 'aanmelden' ? undefined : 'Kies iets zonder je volledige naam, bv. ro-studio3.'}>
+            <input className="sp-invoer" value={naam} onChange={(e) => setNaam(e.target.value)} required autoComplete="username" autoCapitalize="none" />
+          </Veld>
+        )}
+        <Veld label={tab === 'herstel' ? 'Nieuw wachtwoord' : 'Wachtwoord'}>
           <input
             className="sp-invoer"
             type="password"
@@ -182,7 +233,7 @@ function Aanmelden({ onSessie }: { onSessie: (s: Sessie) => void }) {
         )}
         {fout && <p className="sp-melding sp-melding--fout">{fout}</p>}
         <button className="sp-knop" disabled={!!bezig}>
-          {tab === 'aanmelden' ? 'Aanmelden' : tab === 'code' ? 'Account maken' : 'Leefgroep starten'}
+          {{ aanmelden: 'Aanmelden', code: 'Account maken', start: 'Leefgroep starten', herstel: 'Nieuw wachtwoord instellen' }[tab]}
         </button>
         {bezig && <p className="ag-zacht" aria-live="polite">{bezig}</p>}
       </form>
@@ -226,6 +277,7 @@ function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void
   const [beheer, setBeheer] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [ontbreekt, setOntbreekt] = useState<OntbrekendeToegang[]>([]);
+  const [wwVenster, setWwVenster] = useState(false);
   const [, herteken] = useState(0);
 
   const laad = useCallback(async () => {
@@ -283,6 +335,9 @@ function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void
               {!beheer && ontbreekt.length > 0 && <span className="ag-teller">{new Set(ontbreekt.map((o) => o.profiel.id)).size}</span>}
             </button>
           )}
+          <button className="sp-knop sp-knop--klein sp-knop--plat" onClick={() => setWwVenster(true)}>
+            Wachtwoord
+          </button>
           <button
             className="sp-knop sp-knop--klein sp-knop--plat"
             onClick={async () => {
@@ -375,6 +430,8 @@ function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void
           <Legende sessie={sessie} />
         </main>
       )}
+
+      {wwVenster && <WachtwoordVenster sessie={sessie} onDicht={() => setWwVenster(false)} />}
 
       {bewerk && (
         <AfspraakVenster
@@ -551,6 +608,7 @@ function Beheer({ sessie, ontbreekt, onKlaar }: { sessie: Sessie; ontbreekt: Ont
   const [initialen, setInitialen] = useState('');
   const [open, setOpen] = useState<Uitnodiging[]>([]);
   const [nieuw, setNieuw] = useState<Uitnodiging | null>(null);
+  const [herstel, setHerstel] = useState<{ initialen: string; code: string } | null>(null);
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
@@ -661,16 +719,130 @@ function Beheer({ sessie, ontbreekt, onKlaar }: { sessie: Sessie; ontbreekt: Ont
 
       <section className="sp-kaart">
         <h2>Leden van {sessie.leefgroep.naam}</h2>
+        {herstel && (
+          <p className="sp-melding sp-melding--goed">
+            Herstelcode voor {herstel.initialen}: <strong className="ag-code">{herstel.code}</strong>
+            <br />
+            Geef ze persoonlijk door. Ze werkt één keer, 24 uur lang. Daarna staat {herstel.initialen} hierboven bij "Wacht op toegang".
+          </p>
+        )}
         <ul className="ag-lijst">
           {[...sessie.profielen]
             .sort((a, b) => a.rol.localeCompare(b.rol) || a.initialen.localeCompare(b.initialen))
             .map((p) => (
-              <li key={p.id}>
-                <strong>{p.initialen}</strong> <span className="ag-zacht">{p.rol}</span>
+              <li key={p.id} className="ag-rij">
+                <span>
+                  <strong>{p.initialen}</strong> <span className="ag-zacht">{p.rol}</span>
+                  {p.id === sessie.profiel.id && <span className="ag-zacht"> (jij)</span>}
+                </span>
+                {p.id !== sessie.profiel.id && (
+                  <span className="ag-rij">
+                    <button
+                      className="sp-knop sp-knop--klein sp-knop--plat"
+                      disabled={bezig}
+                      onClick={async () => {
+                        setFout(null);
+                        try {
+                          setHerstel({ initialen: p.initialen, code: await sessie.herstelcode(p.id) });
+                        } catch (er) {
+                          setFout(foutTekst(er));
+                        }
+                      }}
+                    >
+                      Wachtwoord vergeten
+                    </button>
+                    <button
+                      className="sp-knop sp-knop--klein sp-knop--gevaar sp-knop--rand"
+                      disabled={bezig}
+                      onClick={async () => {
+                        const uitleg =
+                          p.rol === 'jongere'
+                            ? `${p.initialen} verwijderen? Het account, de eigen agenda en alle afspraken van ${p.initialen} worden gewist. Dit kan niet ongedaan gemaakt worden.`
+                            : `${p.initialen} verwijderen? Het account wordt gewist. Afspraken die ${p.initialen} in de gedeelde agenda's zette, blijven staan. Dit kan niet ongedaan gemaakt worden.`;
+                        if (!confirm(uitleg)) return;
+                        setBezig(true);
+                        setFout(null);
+                        try {
+                          await sessie.verwijderLid(p.id);
+                          await onKlaar();
+                        } catch (er) {
+                          setFout(foutTekst(er));
+                        } finally {
+                          setBezig(false);
+                        }
+                      }}
+                    >
+                      Verwijderen
+                    </button>
+                  </span>
+                )}
               </li>
             ))}
         </ul>
+        {bezig && <p className="ag-zacht">Bezig… de sleutels worden vernieuwd.</p>}
       </section>
     </main>
+  );
+}
+
+// ── Wachtwoord wijzigen ──────────────────────────────────────────────────────
+
+function WachtwoordVenster({ sessie, onDicht }: { sessie: Sessie; onDicht: () => void }) {
+  const [oud, setOud] = useState('');
+  const [nieuw, setNieuw] = useState('');
+  const [nieuw2, setNieuw2] = useState('');
+  const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const [klaar, setKlaar] = useState(false);
+
+  async function bewaar(e: FormEvent) {
+    e.preventDefault();
+    setFout(null);
+    if (nieuw.length < 8) return setFout('Kies een wachtwoord van minstens 8 tekens.');
+    if (nieuw !== nieuw2) return setFout('De twee nieuwe wachtwoorden zijn niet gelijk.');
+    setBezig(true);
+    try {
+      await sessie.wijzigWachtwoord(oud, nieuw);
+      setKlaar(true);
+    } catch (er) {
+      setFout(foutTekst(er));
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  return (
+    <div className="ag-achtergrond" onClick={onDicht}>
+      <form className="ag-venster sp-kaart" onClick={(e) => e.stopPropagation()} onSubmit={bewaar} aria-label="Wachtwoord wijzigen">
+        <h2>Wachtwoord wijzigen</h2>
+        {klaar ? (
+          <p className="sp-melding sp-melding--goed">Je wachtwoord is gewijzigd. Gebruik voortaan het nieuwe.</p>
+        ) : (
+          <fieldset disabled={bezig}>
+            <Veld label="Huidig wachtwoord">
+              <input className="sp-invoer" type="password" value={oud} onChange={(e) => setOud(e.target.value)} required autoComplete="current-password" />
+            </Veld>
+            <Veld label="Nieuw wachtwoord">
+              <input className="sp-invoer" type="password" value={nieuw} onChange={(e) => setNieuw(e.target.value)} required autoComplete="new-password" />
+            </Veld>
+            <Veld label="Nieuw wachtwoord nog eens">
+              <input className="sp-invoer" type="password" value={nieuw2} onChange={(e) => setNieuw2(e.target.value)} required autoComplete="new-password" />
+            </Veld>
+          </fieldset>
+        )}
+        {fout && <p className="sp-melding sp-melding--fout">{fout}</p>}
+        <div className="ag-rij ag-rij--knoppen">
+          <span className="ag-vul" />
+          <button type="button" className="sp-knop sp-knop--plat" onClick={onDicht}>
+            {klaar ? 'Sluiten' : 'Annuleren'}
+          </button>
+          {!klaar && (
+            <button className="sp-knop" disabled={bezig}>
+              {bezig ? 'Bezig…' : 'Wijzigen'}
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
   );
 }

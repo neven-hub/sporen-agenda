@@ -107,7 +107,30 @@ export class Sessie {
     }
     const s = new Sessie(opslag, profiel, await opslag.leefgroep(profiel.leefgroepId), prive);
     await s.laad();
+    await s.zorgEigenRuimtes();
     return s;
+  }
+
+  /** Wachtwoord vergeten: nieuw wachtwoord met een herstelcode van een begeleider. */
+  static async herstel(opslag: Opslag, code: string, wachtwoord: string): Promise<Sessie> {
+    const { prive: _weg, ...materiaal } = await nieuwProfielMateriaal(wachtwoord, Sessie.iteraties);
+    void _weg;
+    const gebruikersnaam = await opslag.gebruikHerstelcode(code, wachtwoord, materiaal);
+    return Sessie.meldAan(opslag, gebruikersnaam, wachtwoord);
+  }
+
+  /** Na een herstel ontbreekt de privé-ruimte: maak ze opnieuw. */
+  private async zorgEigenRuimtes() {
+    let gemaakt = false;
+    if (!this.ruimte('prive', this.profiel.id)) {
+      await this.maakRuimteMetSleutel('prive', this.profiel.id);
+      gemaakt = true;
+    }
+    if (!this.isBegeleider && !this.ruimte('begeleiding', this.profiel.id)) {
+      await this.maakRuimteMetSleutel('begeleiding', this.profiel.id);
+      gemaakt = true;
+    }
+    if (gemaakt) await this.laad();
   }
 
   /** Eerste begeleider: maakt de leefgroep met een team- en een gedeelde agenda. */
@@ -161,8 +184,8 @@ export class Sessie {
     const ik = this.profielen.find((p) => p.id === this.profiel.id);
     if (ik) this.profiel = { ...ik, priveSleutel: this.profiel.priveSleutel, zout: this.profiel.zout };
     this.ruimtes = await this.opslag.ruimtes(this.leefgroep.id);
+    // Altijd opnieuw uitpakken: een begeleider kan intussen een sleutel vernieuwd hebben.
     for (const rij of await this.opslag.mijnSleutels()) {
-      if (this.sleutels.has(rij.ruimteId)) continue;
       try {
         this.sleutels.set(rij.ruimteId, await pakUit(rij.ingepakt, this.prive));
       } catch {
@@ -290,6 +313,68 @@ export class Sessie {
         profielId: profiel.id,
         ingepakt: await pakIn(k, await importeerPubliek(profiel.publiekeSleutel)),
       });
+    }
+  }
+
+  async herstelcode(profielId: string): Promise<string> {
+    return this.opslag.maakHerstelcode(profielId);
+  }
+
+  /**
+   * Verwijdert een lid en vernieuwt daarna de sleutels van elke agenda waar die
+   * persoon bij kon: nieuwe sleutel, afspraken opnieuw versleuteld, opnieuw
+   * ingepakt voor wie overblijft. Zo helpt een oude sleutel niet meer.
+   */
+  async verwijderLid(profielId: string): Promise<void> {
+    if (profielId === this.profiel.id) throw new OpslagFout('Je kan jezelf niet verwijderen.');
+    const weg = this.profielen.find((p) => p.id === profielId);
+    if (!weg) return;
+    const geraakt = this.ruimtes.filter(
+      (r) => r.eigenaarId !== profielId && this.heeftToegang(r.id) && verwachteLeden(r, this.profielen).some((p) => p.id === profielId),
+    );
+    await this.opslag.verwijderLid(profielId);
+    await this.laad();
+    for (const r of geraakt) {
+      if (this.ruimtes.some((x) => x.id === r.id)) await this.vernieuwSleutel(r);
+    }
+  }
+
+  private async vernieuwSleutel(r: Ruimte): Promise<void> {
+    const oud = this.sleutels.get(r.id);
+    if (!oud) return;
+    const nieuw = await nieuweRuimteSleutel();
+    for (const rij of await this.opslag.afspraken([r.id])) {
+      let inhoud: AfspraakInhoud;
+      try {
+        inhoud = await ontsleutelJson<AfspraakInhoud>(oud, rij.inhoud);
+      } catch {
+        continue;
+      }
+      await this.opslag.bewaarAfspraak({ ...rij, inhoud: await versleutelJson(nieuw, inhoud) });
+    }
+    for (const lid of verwachteLeden(r, this.profielen)) {
+      await this.opslag.zetSleutel({ ruimteId: r.id, profielId: lid.id, ingepakt: await pakIn(nieuw, await importeerPubliek(lid.publiekeSleutel)) });
+    }
+    this.sleutels.set(r.id, nieuw);
+  }
+
+  /** Nieuw wachtwoord: de private sleutel opnieuw inpakken met een nieuwe wachtwoordsleutel. */
+  async wijzigWachtwoord(oud: string, nieuw: string): Promise<void> {
+    const zout = willekeurig(16);
+    const ws = await sleutelUitWachtwoord(nieuw, zout, Sessie.iteraties);
+    const pkcs8Sleutel = await this.exporteerbarePrive(oud);
+    const priveSleutel = await bewaarPrive(pkcs8Sleutel, ws);
+    await this.opslag.wijzigWachtwoord(oud, nieuw, { priveSleutel, zout: naarBase64(zout) });
+    this.profiel = { ...this.profiel, priveSleutel, zout: naarBase64(zout) };
+  }
+
+  /** De private sleutel in het geheugen is niet exporteerbaar: open hem opnieuw, nu exporteerbaar. */
+  private async exporteerbarePrive(wachtwoord: string): Promise<CryptoKey> {
+    const ws = await sleutelUitWachtwoord(wachtwoord, uitBase64(this.profiel.zout), Sessie.iteraties);
+    try {
+      return await openPrive(this.profiel.priveSleutel, ws, true);
+    } catch {
+      throw new OpslagFout('Je huidige wachtwoord klopt niet.');
     }
   }
 

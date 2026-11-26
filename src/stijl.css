@@ -415,3 +415,14 @@ body {
 .ag-lijst .ag-rij {
   justify-content: space-between;
 }
+
+.ag-boven {
+  margin-top: 1rem;
+}
+.ag-geen-marge {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.sp-tabs {
+  flex-wrap: wrap;
+}

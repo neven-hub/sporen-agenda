@@ -126,9 +126,9 @@ export async function bewaarPrive(prive: CryptoKey, wachtwoordSleutel: CryptoKey
   return versleutelBytes(wachtwoordSleutel, new Uint8Array(pkcs8));
 }
 
-export async function openPrive(p: Pakket, wachtwoordSleutel: CryptoKey): Promise<CryptoKey> {
+export async function openPrive(p: Pakket, wachtwoordSleutel: CryptoKey, exporteerbaar = false): Promise<CryptoKey> {
   const pkcs8 = await ontsleutelBytes(wachtwoordSleutel, p);
-  return cryptoApi().subtle.importKey('pkcs8', pkcs8, ECDH, false, ['deriveKey']);
+  return cryptoApi().subtle.importKey('pkcs8', pkcs8, ECDH, exporteerbaar, ['deriveKey']);
 }
 
 async function gedeeldeSleutel(prive: CryptoKey, publiek: CryptoKey): Promise<CryptoKey> {

@@ -47,7 +47,8 @@ export interface SleutelRij {
 export interface AfspraakRij {
   id: string;
   ruimteId: string;
-  auteurId: string;
+  /** null als de auteur intussen verwijderd is */
+  auteurId: string | null;
   inhoud: Pakket;
   /** Grove datum (eerste dag van de maand na het einde + bewaartermijn), voor het automatisch opruimen. */
   bewarenTot: string;

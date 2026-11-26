@@ -74,6 +74,30 @@ pnpm dev
 4. De begeleider ziet daarna **Wacht op toegang** en klikt **Toegang geven**.
    Dan kan de nieuwe persoon ook de gedeelde agenda lezen.
 
+## Beheer
+
+- **Wachtwoord vergeten**: een begeleider klikt bij het lid op *Wachtwoord
+  vergeten* en geeft de herstelcode door (eenmalig, 24 uur geldig). Het lid kiest
+  een nieuw wachtwoord. De begeleider geeft daarna opnieuw toegang. De
+  privé-afspraken van dat lid zijn weg.
+- **Iemand verwijderen** (verhuisd, gestopt): account, eigen agenda en sleutels
+  worden gewist. Afspraken die die persoon in een gedeelde agenda zette, blijven
+  staan. De sleutels van de gedeelde agenda's worden meteen vernieuwd.
+- **Automatisch afmelden** na 15 minuten zonder activiteit.
+- **Wachtwoord wijzigen** kan iedereen zelf (knop *Wachtwoord*).
+
+## Testen
+
+```bash
+pnpm test
+```
+
+- `src/kluis/sessie.test.ts`: versleuteling en wie wat ziet, via de app-logica.
+- `supabase/schema.test.ts`: het echte `schema.sql` in een lokale Postgres
+  (PGlite), met Supabase nagebootst. Controleert de toegangsregels: privé niet
+  te delen, jongeren zien elkaars afspraken niet, niet aangemeld krijgt niets,
+  herstellen, verwijderen, opruimen.
+
 ## Open punten voor IT
 
 - Externe opslag (Supabase, EU): akkoord van IT/DPO? Een verwerkersovereenkomst

@@ -149,3 +149,75 @@ describe('bewaartermijn', () => {
     expect(bewarenTot('2026-01-31')).toBe('2026-08-01');
   });
 });
+
+describe('accounts beheren', () => {
+  it('wachtwoord vergeten: met een herstelcode terug binnen, privé is weg, de rest komt terug na toegang', async () => {
+    const { meld, opslag } = await opzet();
+    const jo = await meld('jo');
+    await jo.bewaar(afspraak('Dokter'), jo.ruimte('begeleiding', jo.profiel.id)!.id);
+    await jo.bewaar(afspraak('Geheim'), jo.ruimte('prive', jo.profiel.id)!.id);
+    const joId = jo.profiel.id;
+    await jo.meldAf();
+
+    const ro = await meld('ro');
+    const code = await ro.herstelcode(joId);
+    await ro.meldAf();
+
+    const jo2 = await Sessie.herstel(opslag, code, 'nieuw-ww-jo');
+    expect((await jo2.afspraken()).map((a) => a.titel)).toEqual([]); // nog geen toegang, privé weg
+    await jo2.meldAf();
+    await expect(Sessie.meldAan(opslag, 'jo', 'ww-jo')).rejects.toThrow(); // oud wachtwoord werkt niet meer
+
+    const ro2 = await meld('ro');
+    await ro2.geefToegang(await ro2.ontbrekendeToegang());
+    await ro2.meldAf();
+    const jo3 = await Sessie.meldAan(opslag, 'jo', 'nieuw-ww-jo');
+    const titels = (await jo3.afspraken()).map((a) => a.titel);
+    expect(titels).toContain('Dokter');
+    expect(titels).not.toContain('Geheim');
+    await expect(Sessie.herstel(opslag, code, 'nog-eens-ww')).rejects.toThrow(/herstelcode/);
+  });
+
+  it('wachtwoord wijzigen: oud werkt niet meer, nieuw opent alles', async () => {
+    const { meld, opslag } = await opzet();
+    const li = await meld('li');
+    await li.bewaar(afspraak('Iets privé'), li.ruimte('prive', li.profiel.id)!.id);
+    await expect(li.wijzigWachtwoord('fout', 'nieuw-ww-li')).rejects.toThrow(/huidige wachtwoord/);
+    await li.wijzigWachtwoord('ww-li', 'nieuw-ww-li');
+    await li.meldAf();
+    await expect(Sessie.meldAan(opslag, 'li', 'ww-li')).rejects.toThrow();
+    const li2 = await Sessie.meldAan(opslag, 'li', 'nieuw-ww-li');
+    expect((await li2.afspraken()).map((a) => a.titel)).toContain('Iets privé');
+  });
+
+  it('een lid verwijderen: weg uit de leefgroep, sleutels vernieuwd, afspraken blijven leesbaar voor wie blijft', async () => {
+    const { meld, opslag } = await opzet();
+    const ro = await meld('ro');
+    await ro.bewaar(afspraak('Bewonersvergadering'), ro.ruimte('gedeeld')!.id);
+    const gedeeldId = ro.ruimte('gedeeld')!.id;
+    const li = ro.jongeren().find((j) => j.initialen === 'Li')!;
+    const oudeSleutelLi = (await opslag.sleutelLeden(ro.leefgroep.id)).some((s) => s.profielId === li.id);
+    expect(oudeSleutelLi).toBe(true);
+    await ro.verwijderLid(li.id);
+    expect(ro.profielen.map((p) => p.initialen)).not.toContain('Li');
+    expect((await opslag.sleutelLeden(ro.leefgroep.id)).some((s) => s.profielId === li.id)).toBe(false);
+    await ro.meldAf();
+    await expect(Sessie.meldAan(opslag, 'li', 'ww-li')).rejects.toThrow();
+    for (const n of ['an', 'jo']) {
+      const s = await meld(n);
+      expect(s.heeftToegang(gedeeldId)).toBe(true);
+      expect((await s.afspraken()).map((a) => a.titel)).toContain('Bewonersvergadering');
+      await s.meldAf();
+    }
+  });
+
+  it('een begeleider kan zichzelf niet verwijderen, een jongere niemand', async () => {
+    const { meld } = await opzet();
+    const ro = await meld('ro');
+    await expect(ro.verwijderLid(ro.profiel.id)).rejects.toThrow(/jezelf/);
+    const roId = ro.profiel.id;
+    await ro.meldAf();
+    const jo = await meld('jo');
+    await expect(jo.verwijderLid(roId)).rejects.toThrow(/begeleiders/);
+  });
+});

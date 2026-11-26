@@ -37,7 +37,7 @@ const uitRuimte = (r: { id: string; leefgroep_id: string; soort: Ruimte['soort']
   eigenaarId: r.eigenaar_id,
 });
 
-const uitAfspraak = (r: { id: string; ruimte_id: string; auteur_id: string; inhoud: AfspraakRij['inhoud']; bewaren_tot: string }): AfspraakRij => ({
+const uitAfspraak = (r: { id: string; ruimte_id: string; auteur_id: string | null; inhoud: AfspraakRij['inhoud']; bewaren_tot: string }): AfspraakRij => ({
   id: r.id,
   ruimteId: r.ruimte_id,
   auteurId: r.auteur_id,
@@ -58,6 +58,8 @@ function vertaal(e: { message?: string; code?: string } | null, standaard: strin
   if (/invalid login credentials/i.test(m)) throw new OpslagFout('Gebruikersnaam of wachtwoord klopt niet.');
   if (/password should be at least/i.test(m)) throw new OpslagFout('Kies een wachtwoord van minstens 8 tekens.');
   if (/startcode/i.test(m)) throw new OpslagFout('De startcode klopt niet.');
+  if (/herstelcode/i.test(m)) throw new OpslagFout('Deze herstelcode bestaat niet, is verlopen of is al gebruikt.');
+  if (/huidig wachtwoord/i.test(m)) throw new OpslagFout('Je huidige wachtwoord klopt niet.');
   if (/uitnodiging/i.test(m)) throw new OpslagFout('Deze code bestaat niet, is verlopen of is al gebruikt.');
   throw new OpslagFout(m ? `${standaard} (${m})` : standaard);
 }
@@ -224,6 +226,41 @@ export class SupabaseOpslag implements Opslag {
 
   async verwijderAfspraak(id: string): Promise<void> {
     const { error } = await this.db.from('afspraken').delete().eq('id', id);
+    if (error) vertaal(error, 'Verwijderen lukte niet.');
+  }
+
+  // ── Beheer van accounts ──
+
+  async maakHerstelcode(profielId: string): Promise<string> {
+    const { data, error } = await this.db.rpc('maak_herstelcode', { p_profiel: profielId });
+    if (error) vertaal(error, 'Herstelcode maken lukte niet.');
+    return data as string;
+  }
+
+  async gebruikHerstelcode(code: string, wachtwoord: string, m: NieuwProfielMetCode): Promise<string> {
+    const { data, error } = await this.db.rpc('gebruik_herstelcode', {
+      p_code: code.trim().toUpperCase(),
+      p_wachtwoord: wachtwoord,
+      p_publieke_sleutel: m.publiekeSleutel,
+      p_prive_sleutel: m.priveSleutel,
+      p_zout: m.zout,
+    });
+    if (error) vertaal(error, 'Herstellen lukte niet.');
+    return data as string;
+  }
+
+  async wijzigWachtwoord(oud: string, nieuw: string, m: Pick<Profiel, 'priveSleutel' | 'zout'>): Promise<void> {
+    const { error } = await this.db.rpc('wijzig_wachtwoord', {
+      p_oud: oud,
+      p_nieuw: nieuw,
+      p_prive_sleutel: m.priveSleutel,
+      p_zout: m.zout,
+    });
+    if (error) vertaal(error, 'Wachtwoord wijzigen lukte niet.');
+  }
+
+  async verwijderLid(profielId: string): Promise<void> {
+    const { error } = await this.db.rpc('verwijder_lid', { p_profiel: profielId });
     if (error) vertaal(error, 'Verwijderen lukte niet.');
   }
 }

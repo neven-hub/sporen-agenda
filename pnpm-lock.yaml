@@ -18,6 +18,9 @@ importers:
         specifier: ^19.2.4
         version: 19.3.1(react@19.3.1)
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.6.0
+        version: 0.6.0
       '@types/node':
         specifier: ^26.4.1
         version: 26.6.11
@@ -41,6 +44,9 @@ importers:
         version: 4.1.12(@types/node@26.6.11)(vite@8.4.0(@types/node@26.6.11))
 
 packages:
+
+  '@electric-sql/pglite@0.6.0':
+    resolution: {integrity: sha512-g3tAPFjRLEdN1g5FvawTl4ETo9LtmVwBRUJYnH6Erl6mhlKFRGB2mYhPABffIuXMYxki64mX0Al8U4UFUhuYDQ==}
 
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
@@ -540,6 +546,8 @@ packages:
     hasBin: true
 
 snapshots:
+
+  '@electric-sql/pglite@0.6.0': {}
 
   '@jridgewell/sourcemap-codec@1.6.0': {}
 

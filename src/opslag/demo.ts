@@ -2,6 +2,8 @@ import type { AfspraakRij, Leefgroep, Profiel, Rol, Ruimte, SleutelRij, Uitnodig
 import { naarBase64 } from '../kluis/crypto';
 import { nieuweCode, normaliseerNaam, OpslagFout, type NieuwProfiel, type NieuwProfielMetCode, type Opslag } from './opslag';
 
+const DAG = 24 * 60 * 60 * 1000;
+
 interface Tabellen {
   gebruikers: { id: string; naam: string; hash: string }[];
   leefgroepen: Leefgroep[];
@@ -10,6 +12,7 @@ interface Tabellen {
   sleutels: SleutelRij[];
   afspraken: AfspraakRij[];
   uitnodigingen: Uitnodiging[];
+  herstelcodes?: { code: string; profielId: string; vervalt: number }[];
 }
 
 const leeg = (): Tabellen => ({
@@ -268,6 +271,59 @@ export class DemoOpslag implements Opslag {
     if (!a) return;
     if (!this.magWijzigen(a)) throw new OpslagFout('Je kan deze afspraak niet verwijderen.');
     this.t.afspraken = this.t.afspraken.filter((x) => x.id !== aid);
+    this.bewaar();
+  }
+
+  // ── Beheer van accounts ──
+
+  async maakHerstelcode(profielId: string): Promise<string> {
+    const doel = this.t.profielen.find((p) => p.id === profielId);
+    if (!doel) throw new OpslagFout('Lid niet gevonden.');
+    this.eisBegeleider(doel.leefgroepId);
+    const code = `${nieuweCode()}-${nieuweCode().slice(0, 4)}`;
+    this.t.herstelcodes = [...(this.t.herstelcodes ?? []).filter((h) => h.profielId !== profielId), { code, profielId, vervalt: Date.now() + DAG }];
+    this.bewaar();
+    return code;
+  }
+
+  async gebruikHerstelcode(code: string, wachtwoord: string, m: NieuwProfielMetCode): Promise<string> {
+    const c = code.trim().toUpperCase();
+    const h = (this.t.herstelcodes ?? []).find((x) => x.code === c && x.vervalt > Date.now());
+    if (!h) throw new OpslagFout('Deze herstelcode bestaat niet, is verlopen of is al gebruikt.');
+    this.t.herstelcodes = (this.t.herstelcodes ?? []).filter((x) => x.code !== c);
+    const g = this.t.gebruikers.find((x) => x.id === h.profielId)!;
+    g.hash = await hash(wachtwoord);
+    this.t.profielen = this.t.profielen.map((p) => (p.id === h.profielId ? { ...p, ...m } : p));
+    this.t.sleutels = this.t.sleutels.filter((s) => s.profielId !== h.profielId);
+    const prive = this.t.ruimtes.filter((r) => r.soort === 'prive' && r.eigenaarId === h.profielId).map((r) => r.id);
+    this.t.afspraken = this.t.afspraken.filter((a) => !prive.includes(a.ruimteId));
+    this.t.ruimtes = this.t.ruimtes.filter((r) => !prive.includes(r.id));
+    this.bewaar();
+    return g.naam;
+  }
+
+  async wijzigWachtwoord(oud: string, nieuw: string, m: Pick<Profiel, 'priveSleutel' | 'zout'>): Promise<void> {
+    const g = this.t.gebruikers.find((x) => x.id === this.mij())!;
+    if (g.hash !== (await hash(oud))) throw new OpslagFout('Je huidige wachtwoord klopt niet.');
+    g.hash = await hash(nieuw);
+    this.t.profielen = this.t.profielen.map((p) => (p.id === g.id ? { ...p, ...m } : p));
+    this.bewaar();
+  }
+
+  async verwijderLid(profielId: string): Promise<void> {
+    const doel = this.t.profielen.find((p) => p.id === profielId);
+    if (!doel) return;
+    this.eisBegeleider(doel.leefgroepId);
+    if (profielId === this.ik) throw new OpslagFout('Je kan jezelf niet verwijderen.');
+    const eigen = this.t.ruimtes.filter((r) => r.eigenaarId === profielId).map((r) => r.id);
+    this.t.afspraken = this.t.afspraken
+      .filter((a) => !eigen.includes(a.ruimteId))
+      .map((a) => (a.auteurId === profielId ? { ...a, auteurId: null } : a));
+    this.t.sleutels = this.t.sleutels.filter((s) => s.profielId !== profielId && !eigen.includes(s.ruimteId));
+    this.t.ruimtes = this.t.ruimtes.filter((r) => !eigen.includes(r.id));
+    this.t.profielen = this.t.profielen.filter((p) => p.id !== profielId);
+    this.t.gebruikers = this.t.gebruikers.filter((g) => g.id !== profielId);
+    this.t.herstelcodes = (this.t.herstelcodes ?? []).filter((h) => h.profielId !== profielId);
     this.bewaar();
   }
 }

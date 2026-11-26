@@ -34,7 +34,7 @@ create table if not exists public.ruimtes (
   leefgroep_id     uuid not null references public.leefgroepen (id) on delete cascade,
   soort            text not null check (soort in ('prive', 'begeleiding', 'team', 'gedeeld')),
   eigenaar_id      uuid references public.profielen (id) on delete cascade,
-  aangemaakt_door  uuid not null default auth.uid() references public.profielen (id) on delete cascade,
+  aangemaakt_door  uuid default auth.uid() references public.profielen (id) on delete set null,
   check ((soort in ('prive', 'begeleiding')) = (eigenaar_id is not null)),
   unique nulls not distinct (leefgroep_id, soort, eigenaar_id)
 );
@@ -49,7 +49,7 @@ create table if not exists public.sleutels (
 create table if not exists public.afspraken (
   id           uuid primary key default gen_random_uuid(),
   ruimte_id    uuid not null references public.ruimtes (id) on delete cascade,
-  auteur_id    uuid not null default auth.uid() references public.profielen (id) on delete cascade,
+  auteur_id    uuid default auth.uid() references public.profielen (id) on delete set null,
   inhoud       jsonb not null,   -- versleuteld: titel, datum, uren, plaats, notitie
   bewaren_tot  date not null,    -- grove datum (1e van een maand) voor automatisch opruimen
   aangemaakt   timestamptz not null default now(),
@@ -64,6 +64,14 @@ create table if not exists public.uitnodigingen (
   initialen        text not null check (char_length(initialen) between 1 and 6),
   aangemaakt_door  uuid not null default auth.uid() references public.profielen (id) on delete cascade,
   vervalt          timestamptz not null default now() + interval '14 days'
+);
+
+-- Herstelcodes voor wie zijn wachtwoord vergat (24 uur geldig, eenmalig).
+create table if not exists public.herstelcodes (
+  code             text primary key,
+  profiel_id       uuid not null references public.profielen (id) on delete cascade,
+  aangemaakt_door  uuid references public.profielen (id) on delete set null,
+  vervalt          timestamptz not null default now() + interval '24 hours'
 );
 
 -- Startcodes: alleen te zien en te maken in de SQL Editor (geen toegang voor de app).
@@ -118,6 +126,7 @@ alter table public.ruimtes       enable row level security;
 alter table public.sleutels      enable row level security;
 alter table public.afspraken     enable row level security;
 alter table public.uitnodigingen enable row level security;
+alter table public.herstelcodes  enable row level security;  -- geen regels: alleen via functies
 
 -- Leefgroep: alleen je eigen.
 drop policy if exists leefgroep_lezen on public.leefgroepen;
@@ -238,15 +247,11 @@ end $$;
 create or replace function public.maak_uitnodiging(p_rol text, p_initialen text) returns public.uitnodigingen
 language plpgsql security definer set search_path = '' as $$
 declare
-  v_tekens text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  v_code text := '';
+  v_code text;
   v_u public.uitnodigingen;
 begin
   if not public.ben_begeleider() then raise exception 'alleen begeleiders'; end if;
-  for i in 1..8 loop
-    v_code := v_code || substr(v_tekens, 1 + (get_byte(extensions.gen_random_bytes(1), 0) % length(v_tekens)), 1);
-  end loop;
-  v_code := substr(v_code, 1, 4) || '-' || substr(v_code, 5, 4);
+  v_code := public.maak_code(8);
   insert into public.uitnodigingen (code, leefgroep_id, rol, initialen)
     values (v_code, public.mijn_leefgroep(), p_rol, p_initialen)
     returning * into v_u;
@@ -287,7 +292,106 @@ language sql stable security definer set search_path = '' as $$
   where public.ben_begeleider() and r.leefgroep_id = public.mijn_leefgroep()
 $$;
 
-revoke execute on all functions in schema public from anon;
+
+-- Leesbare code van n tekens (zonder 0/O, 1/I/L), in blokken van 4.
+create or replace function public.maak_code(p_lengte int) returns text
+language plpgsql volatile set search_path = '' as $$
+declare
+  v_tekens text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  v_code text := '';
+begin
+  for i in 1..p_lengte loop
+    if i > 1 and (i - 1) % 4 = 0 then v_code := v_code || '-'; end if;
+    v_code := v_code || substr(v_tekens, 1 + (get_byte(extensions.gen_random_bytes(1), 0) % length(v_tekens)), 1);
+  end loop;
+  return v_code;
+end $$;
+
+-- Begeleider: herstelcode voor een lid van de eigen leefgroep.
+create or replace function public.maak_herstelcode(p_profiel uuid) returns text
+language plpgsql security definer set search_path = '' as $$
+declare v_code text;
+begin
+  if not public.ben_begeleider() then raise exception 'alleen begeleiders'; end if;
+  if not exists (select 1 from public.profielen where id = p_profiel and leefgroep_id = public.mijn_leefgroep()) then
+    raise exception 'lid niet gevonden';
+  end if;
+  delete from public.herstelcodes where profiel_id = p_profiel;
+  v_code := public.maak_code(12);
+  insert into public.herstelcodes (code, profiel_id, aangemaakt_door) values (v_code, p_profiel, auth.uid());
+  return v_code;
+end $$;
+
+-- Zonder aanmelden (rol anon): nieuw wachtwoord en nieuwe sleutels met een herstelcode.
+-- De oude sleutels en de privé-agenda vervallen (niemand kan die nog openen).
+create or replace function public.gebruik_herstelcode(
+  p_code text, p_wachtwoord text, p_publieke_sleutel jsonb, p_prive_sleutel jsonb, p_zout text
+) returns text
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_profiel uuid;
+  v_email text;
+begin
+  if char_length(p_wachtwoord) < 8 then raise exception 'wachtwoord te kort'; end if;
+  delete from public.herstelcodes
+    where code = upper(trim(p_code)) and vervalt > now()
+    returning profiel_id into v_profiel;
+  if v_profiel is null then raise exception 'herstelcode ongeldig'; end if;
+
+  update auth.users
+     set encrypted_password = extensions.crypt(p_wachtwoord, extensions.gen_salt('bf')),
+         updated_at = now()
+   where id = v_profiel
+   returning email into v_email;
+  delete from auth.sessions where user_id = v_profiel;
+
+  update public.profielen
+     set publieke_sleutel = p_publieke_sleutel, prive_sleutel = p_prive_sleutel, zout = p_zout
+   where id = v_profiel;
+  delete from public.sleutels where profiel_id = v_profiel;
+  delete from public.ruimtes where soort = 'prive' and eigenaar_id = v_profiel;
+  return split_part(v_email, '@', 1);
+end $$;
+
+-- Eigen wachtwoord wijzigen: controleert het huidige, en pakt de private sleutel opnieuw in.
+create or replace function public.wijzig_wachtwoord(
+  p_oud text, p_nieuw text, p_prive_sleutel jsonb, p_zout text
+) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if char_length(p_nieuw) < 8 then raise exception 'wachtwoord te kort'; end if;
+  if not exists (
+    select 1 from auth.users
+     where id = auth.uid() and encrypted_password = extensions.crypt(p_oud, encrypted_password)
+  ) then
+    raise exception 'huidig wachtwoord klopt niet';
+  end if;
+  update auth.users
+     set encrypted_password = extensions.crypt(p_nieuw, extensions.gen_salt('bf')), updated_at = now()
+   where id = auth.uid();
+  update public.profielen set prive_sleutel = p_prive_sleutel, zout = p_zout where id = auth.uid();
+end $$;
+
+-- Begeleider: een lid verwijderen (account, profiel, eigen agenda's, sleutels).
+-- Afspraken die die persoon in andere agenda's zette, blijven staan (zonder auteur).
+create or replace function public.verwijder_lid(p_profiel uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not public.ben_begeleider() then raise exception 'alleen begeleiders'; end if;
+  if p_profiel = auth.uid() then raise exception 'je kan jezelf niet verwijderen'; end if;
+  if not exists (select 1 from public.profielen where id = p_profiel and leefgroep_id = public.mijn_leefgroep()) then
+    raise exception 'lid niet gevonden';
+  end if;
+  delete from auth.users where id = p_profiel;
+end $$;
+
+-- Rechten op functies. Postgres geeft standaard iedereen (PUBLIC) uitvoerrecht:
+-- dat halen we weg, en geven het alleen aan aangemelde gebruikers.
+revoke execute on all functions in schema public from public, anon;
+grant execute on all functions in schema public to authenticated;
+revoke execute on function public.maak_code(int) from authenticated;
+-- De enige functie zonder aanmelden: herstellen met een code.
+grant execute on function public.gebruik_herstelcode(text, text, jsonb, jsonb, text) to anon;
 
 -- ── Bewaartermijn: automatisch opruimen ─────────────────────────────────────
 -- Afspraken worden 6 maanden na de maand van de afspraak verwijderd, verlopen
@@ -297,8 +401,9 @@ create or replace function public.ruim_op() returns void
 language sql security definer set search_path = '' as $$
   delete from public.afspraken where bewaren_tot <= current_date;
   delete from public.uitnodigingen where vervalt <= now();
+  delete from public.herstelcodes where vervalt <= now();
 $$;
-revoke execute on function public.ruim_op() from anon, authenticated;
+revoke execute on function public.ruim_op() from public, anon, authenticated;
 
 do $$
 begin
