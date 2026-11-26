@@ -193,8 +193,11 @@ create policy sleutel_geven on public.sleutels for insert to authenticated
     )
   );
 drop policy if exists sleutel_vervangen on public.sleutels;
+-- Een bestaande sleutel vervangen (bv. na het vernieuwen) mogen alleen begeleiders
+-- die zelf de sleutel hebben. Zo kan een jongere niemand buitensluiten door
+-- andermans sleutel te overschrijven.
 create policy sleutel_vervangen on public.sleutels for update to authenticated
-  using (public.heb_sleutel(ruimte_id) or profiel_id = auth.uid())
+  using (public.ben_begeleider() and public.heb_sleutel(ruimte_id))
   with check (public.verwacht_lid(ruimte_id, profiel_id) and public.heb_sleutel(ruimte_id));
 
 -- Afspraken: lezen en toevoegen als je de sleutel van de ruimte hebt.

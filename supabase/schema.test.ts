@@ -185,6 +185,12 @@ describe('schema.sql in Postgres', () => {
     expect(r.ingepakt).toEqual({ test: 'nieuw' });
   });
 
+  it('een jongere kan de sleutel van een ander niet overschrijven', async () => {
+    const r = await als(jo, `update public.sleutels set ingepakt = '{"kapot":1}' where ruimte_id = $1 and profiel_id = $2 returning 1`, [gedeeld, li]);
+    expect(r).toHaveLength(0);
+    await expect(geefSleutel(jo, gedeeld, li, 'kapot')).rejects.toThrow(/row-level security/);
+  });
+
   it('een jongere ziet de ingepakte sleutels van andere jongeren niet', async () => {
     const rijen = await als<{ profiel_id: string }>(jo, `select profiel_id from public.sleutels where ruimte_id = $1`, [liBeg]);
     expect(rijen).toHaveLength(0);

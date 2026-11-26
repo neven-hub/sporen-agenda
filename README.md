@@ -127,6 +127,9 @@ delete from public.leefgroepen where naam like 'Rooktest %';
 - Leefgroepnaam, initialen en rollen staan onversleuteld bij Supabase (de
   afspraken zelf wel versleuteld). Aanvaardbaar, met een neutrale leefgroepnaam?
 - Bewaartermijn van 6 maanden: is dat goed?
+- Iedereen op internet kan een (leeg) account aanmaken: zonder uitnodigingscode
+  komt die nergens bij, maar het geeft rommel. Later eventueel CAPTCHA aanzetten
+  (Authentication → Attack Protection) en de rate limits nakijken.
 - Wachtwoord vergeten: hoe vangen we dat op (nieuw account, privé-afspraken weg)?
 - Later: overstap naar een server van Sporen zelf kan, de opslaglaag is los te
   vervangen.
