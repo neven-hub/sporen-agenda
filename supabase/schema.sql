@@ -118,6 +118,14 @@ language sql stable security definer set search_path = '' as $$
   )
 $$;
 
+-- ── Tabelrechten ────────────────────────────────────────────────────────────
+-- Expliciet, zodat het niet afhangt van "Grant API access to new tables
+-- automatically". Alleen aangemelde gebruikers; anon krijgt geen enkele tabel.
+-- Wat ze per rij mogen, bepalen de regels (RLS) hieronder.
+revoke all on all tables in schema public from anon, authenticated;
+grant select, insert, update, delete on public.leefgroepen, public.ruimtes, public.sleutels,
+  public.afspraken, public.uitnodigingen to authenticated;
+
 -- ── Toegangsregels (RLS) ────────────────────────────────────────────────────
 
 alter table public.leefgroepen   enable row level security;

@@ -18,8 +18,6 @@ const SUPABASE_NABOOTSING = `
   create role anon nologin;
   create role authenticated nologin;
   grant usage on schema public to anon, authenticated;
-  alter default privileges in schema public grant all on tables to anon, authenticated;
-  alter default privileges in schema public grant all on sequences to anon, authenticated;
   create schema auth;
   create table auth.users (id uuid primary key, email text unique, encrypted_password text, updated_at timestamptz);
   create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid references auth.users(id) on delete cascade);
@@ -198,8 +196,8 @@ describe('schema.sql in Postgres', () => {
   });
 
   it('niet aangemeld (anon): geen gegevens en geen functies, behalve herstellen', async () => {
-    expect(await als(null, `select * from public.afspraken`)).toHaveLength(0);
-    expect(await als(null, `select id from public.profielen`).catch(() => [])).toHaveLength(0);
+    await expect(als(null, `select * from public.afspraken`)).rejects.toThrow(/permission denied/);
+    await expect(als(null, `select id from public.profielen`)).rejects.toThrow(/permission denied/);
     await expect(als(null, `select public.maak_uitnodiging('jongere', 'Q')`)).rejects.toThrow(/permission denied/);
     await expect(als(null, `select * from public.mijn_profiel()`)).rejects.toThrow(/permission denied/);
     await expect(als(null, `select public.gebruik_herstelcode('BESTAAT-NIET', 'nieuw-wachtwoord', '{}', '{}', 'z')`)).rejects.toThrow(/herstelcode/);
