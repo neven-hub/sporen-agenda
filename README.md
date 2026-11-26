@@ -114,7 +114,7 @@ De volledige test gebruikt een eenmalige startcode en laat een testbegeleider
 en een testleefgroep achter. Opruimen in de SQL Editor:
 
 ```sql
-delete from auth.users where email like 'rt%@agenda.invalid' or email like 'rooktest-%@agenda.invalid';
+delete from auth.users where email ~ '^(rt[0-9a-z]{8,}-(ro|an|jo|li)|rooktest-[0-9]+)@agenda\.invalid$';
 delete from public.leefgroepen where naam like 'Rooktest %';
 ```
 

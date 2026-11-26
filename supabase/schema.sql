@@ -169,12 +169,20 @@ create policy ruimte_maken on public.ruimtes for insert to authenticated
     )
   );
 
--- Sleutels: je ziet alleen je eigen. Iemand toegang geven kan als je zelf de
--- sleutel hebt (of de ruimte net maakte), en alleen aan wie erbij hoort.
--- Een privé-ruimte deel je met niemand: verwacht_lid laat alleen de eigenaar toe.
+-- Sleutels: je ziet je eigen ingepakte sleutels, en die van een ruimte waarvan je
+-- zelf de sleutel hebt of die je maakte. (Nodig omdat toegang geven een
+-- "insert of update" is, en Postgres dan ook leesrecht vraagt. Een ingepakte
+-- sleutel van iemand anders is onbruikbaar zonder diens private sleutel.)
+-- Iemand toegang geven kan als je zelf de sleutel hebt (of de ruimte net maakte),
+-- en alleen aan wie erbij hoort. Een privé-ruimte deel je met niemand:
+-- verwacht_lid laat alleen de eigenaar toe.
 drop policy if exists sleutel_lezen on public.sleutels;
 create policy sleutel_lezen on public.sleutels for select to authenticated
-  using (profiel_id = auth.uid());
+  using (
+    profiel_id = auth.uid()
+    or public.heb_sleutel(ruimte_id)
+    or exists (select 1 from public.ruimtes r where r.id = ruimte_id and r.aangemaakt_door = auth.uid())
+  );
 drop policy if exists sleutel_geven on public.sleutels;
 create policy sleutel_geven on public.sleutels for insert to authenticated
   with check (

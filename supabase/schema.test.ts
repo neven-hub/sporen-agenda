@@ -67,8 +67,14 @@ async function ruimte(id: string, soort: string, eigenaar: string | null): Promi
   return r.id;
 }
 
-async function geefSleutel(door: string, ruimteId: string, aan: string) {
-  await als(door, `insert into public.sleutels (ruimte_id, profiel_id, ingepakt) values ($1, $2, $3)`, [ruimteId, aan, sleutel('k')]);
+/** Zoals de app (supabase-js upsert): insert ... on conflict do update. */
+async function geefSleutel(door: string, ruimteId: string, aan: string, inhoud = 'k') {
+  await als(
+    door,
+    `insert into public.sleutels (ruimte_id, profiel_id, ingepakt) values ($1, $2, $3)
+     on conflict (ruimte_id, profiel_id) do update set ingepakt = excluded.ingepakt`,
+    [ruimteId, aan, sleutel(inhoud)],
+  );
 }
 
 async function afspraak(door: string, ruimteId: string): Promise<string> {
@@ -173,6 +179,17 @@ describe('schema.sql in Postgres', () => {
     for (const p of [ro, an, jo, li]) expect(await zichtbareAfspraken(p)).toContain(a);
   });
 
+  it('een begeleider kan sleutels vernieuwen (upsert over bestaande rijen van anderen)', async () => {
+    await geefSleutel(ro, gedeeld, jo, 'nieuw');
+    const r = await een<{ ingepakt: unknown }>(jo, `select ingepakt from public.sleutels where ruimte_id = $1 and profiel_id = $2`, [gedeeld, jo]);
+    expect(r.ingepakt).toEqual({ test: 'nieuw' });
+  });
+
+  it('een jongere ziet de ingepakte sleutels van andere jongeren niet', async () => {
+    const rijen = await als<{ profiel_id: string }>(jo, `select profiel_id from public.sleutels where ruimte_id = $1`, [liBeg]);
+    expect(rijen).toHaveLength(0);
+  });
+
   it('wie een sleutel niet heeft, kan hem ook niet aan zichzelf geven', async () => {
     await expect(geefSleutel(li, joBeg, li)).rejects.toThrow(/row-level security/);
   });
@@ -211,12 +228,12 @@ describe('schema.sql in Postgres', () => {
     expect(naam).toBe('jo');
     const pw = await db.query(`select encrypted_password = extensions.crypt('nieuw-wachtwoord', encrypted_password) as ok from auth.users where id = $1`, [jo]);
     expect((pw.rows[0] as { ok: boolean }).ok).toBe(true);
-    expect(await als(jo, `select * from public.sleutels`)).toHaveLength(0);
+    expect(await als(jo, `select * from public.sleutels where profiel_id = $1`, [jo])).toHaveLength(0);
     expect(await als(ro, `select id from public.ruimtes where id = $1`, [joPrive])).toHaveLength(0);
     await expect(als(null, `select public.gebruik_herstelcode($1, 'nog-een-keer', '{}', '{}', 'z')`, [code])).rejects.toThrow(/herstelcode/);
     // Ro geeft Jo opnieuw toegang tot de begeleiding en de gedeelde agenda
     await als(ro, `insert into public.sleutels (ruimte_id, profiel_id, ingepakt) values ($1, $3, '{}'), ($2, $3, '{}')`, [joBeg, gedeeld, jo]);
-    expect((await als(jo, `select ruimte_id from public.sleutels`)).length).toBe(2);
+    expect((await als(jo, `select ruimte_id from public.sleutels where profiel_id = $1`, [jo])).length).toBe(2);
   });
 
   it('wachtwoord wijzigen controleert het huidige', async () => {
