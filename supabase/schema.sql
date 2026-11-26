@@ -83,6 +83,7 @@ create table if not exists private.startcodes (
   gebruikt   timestamptz
 );
 revoke all on schema private from anon, authenticated;
+alter table private.startcodes enable row level security;  -- extra slot; alleen functies (als eigenaar) komen erbij
 
 -- ── Hulpfuncties ────────────────────────────────────────────────────────────
 
