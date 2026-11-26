@@ -103,6 +103,21 @@ pnpm test
   te delen, jongeren zien elkaars afspraken niet, niet aangemeld krijgt niets,
   herstellen, verwijderen, opruimen.
 
+### Tegen het echte Supabase-project
+
+```bash
+pnpm rooktest                       # geen startcode nodig: rechten, logins, functies
+E2E_STARTCODE=... pnpm test:e2e     # volledig: leefgroep, uitnodigen, zien/niet zien, herstel, verwijderen
+```
+
+De volledige test gebruikt een eenmalige startcode en laat een testbegeleider
+en een testleefgroep achter. Opruimen in de SQL Editor:
+
+```sql
+delete from auth.users where email like 'rt%@agenda.invalid' or email like 'rooktest-%@agenda.invalid';
+delete from public.leefgroepen where naam like 'Rooktest %';
+```
+
 ## Open punten voor IT
 
 - Externe opslag (Supabase, EU): akkoord van IT/DPO? Een verwerkersovereenkomst
