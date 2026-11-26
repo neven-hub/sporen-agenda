@@ -426,3 +426,176 @@ body {
 .sp-tabs {
   flex-wrap: wrap;
 }
+
+/* ── Wissel week / maand ────────────────────────────────────────────────── */
+
+.ag-wissel {
+  display: inline-flex;
+  border: 1px solid var(--sp-groen);
+  margin-right: 0.3rem;
+}
+.ag-wissel button {
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: var(--sp-wit);
+  color: var(--sp-groen);
+  border: none;
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+}
+.ag-wissel button + button {
+  border-left: 1px solid var(--sp-groen);
+}
+.ag-wissel--aan {
+  background: var(--sp-groen) !important;
+  color: var(--sp-wit) !important;
+}
+.ag-wissel button:focus-visible {
+  outline: 3px solid var(--sp-geel);
+  outline-offset: 2px;
+}
+
+/* ── Maandkalender ──────────────────────────────────────────────────────── */
+
+.ag-maand {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid var(--sp-lijn);
+  border-left: 1px solid var(--sp-lijn);
+}
+.ag-maand-kop {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sp-tekst-zacht);
+  text-align: center;
+  padding: 0.35rem 0;
+  border-right: 1px solid var(--sp-lijn);
+  border-bottom: 1px solid var(--sp-lijn);
+  background: var(--sp-vlak);
+}
+.ag-maand-dag {
+  min-height: 6.5rem;
+  padding: 0.25rem;
+  border-right: 1px solid var(--sp-lijn);
+  border-bottom: 1px solid var(--sp-lijn);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  cursor: pointer;
+  min-width: 0;
+  background: var(--sp-wit);
+}
+.ag-maand-dag:hover {
+  background: #fafafa;
+}
+.ag-maand-dag:focus-visible {
+  outline: 3px solid var(--sp-geel);
+  outline-offset: -3px;
+}
+.ag-maand-dag--buiten {
+  background: #fafafa;
+}
+.ag-maand-dag--buiten .ag-maand-nr {
+  color: #a0a0a0;
+}
+.ag-maand-dag--gekozen {
+  box-shadow: inset 0 0 0 2px var(--sp-turquoise);
+}
+.ag-maand-nr {
+  font-size: 0.82rem;
+  font-weight: 600;
+  width: 1.7rem;
+  height: 1.7rem;
+  line-height: 1.7rem;
+  text-align: center;
+  border-radius: 50%;
+  align-self: flex-start;
+}
+.ag-maand-dag--vandaag .ag-maand-nr {
+  background: var(--sp-groen);
+  color: var(--sp-wit);
+}
+.ag-maand-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ag-maand-item {
+  font: inherit;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  text-align: left;
+  border: none;
+  border-left: 3px solid var(--ag-prive);
+  background: var(--ag-prive-licht);
+  color: var(--sp-tekst);
+  padding: 1px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  min-width: 0;
+}
+.ag-maand-item:hover {
+  filter: brightness(0.96);
+}
+.ag-maand-item--team {
+  border-left-color: var(--ag-team);
+  background: var(--ag-team-licht);
+}
+.ag-maand-item--begeleiding {
+  border-left-color: var(--ag-begeleiding);
+  background: var(--ag-begeleiding-licht);
+}
+.ag-maand-item--gedeeld {
+  border-left-color: var(--ag-gedeeld);
+  background: var(--ag-gedeeld-licht);
+}
+.ag-maand-tijd {
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-tekst-zacht);
+}
+.ag-maand-meer {
+  font-size: 0.72rem;
+  color: var(--sp-tekst-zacht);
+  padding-left: 4px;
+}
+.ag-maand-lijst {
+  margin-top: 1rem;
+}
+.ag-leeg--tekst {
+  color: var(--sp-tekst-zacht);
+  font-size: 0.88rem;
+}
+
+/* Op een gsm: dezelfde titels, kleiner en zonder uur (zoals Google Agenda). */
+@media (max-width: 40rem) {
+  .ag-maand-dag {
+    min-height: 5.2rem;
+    padding: 0.15rem 1px;
+  }
+  .ag-maand-nr {
+    font-size: 0.72rem;
+    width: 1.4rem;
+    height: 1.4rem;
+    line-height: 1.4rem;
+    align-self: center;
+  }
+  .ag-maand-item {
+    font-size: 0.6rem;
+    padding: 1px 2px;
+    border-left-width: 2px;
+    text-overflow: clip;
+  }
+  .ag-maand-tijd {
+    display: none;
+  }
+  .ag-maand-meer {
+    font-size: 0.6rem;
+    padding-left: 2px;
+  }
+}

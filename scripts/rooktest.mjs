@@ -1,12 +1,12 @@
 // Rooktest tegen het echte Supabase-project (geen startcode nodig).
 // Controleert: verbinding, "Confirm email" uit, rechten voor niet-aangemelden,
 // functies bereikbaar, startcode-controle.
-// Gebruik: node --env-file=.env.local scripts/rooktest.mjs
+// Gebruik: node --env-file=.env.production.local scripts/rooktest.mjs
 import { createClient } from '@supabase/supabase-js';
 
 const url = process.env.VITE_SUPABASE_URL;
 const key = process.env.VITE_SUPABASE_ANON_KEY;
-if (!url || !key) throw new Error('VITE_SUPABASE_URL en VITE_SUPABASE_ANON_KEY ontbreken (.env.local).');
+if (!url || !key) throw new Error('VITE_SUPABASE_URL en VITE_SUPABASE_ANON_KEY ontbreken (.env.production.local).');
 
 const db = createClient(url, key, { auth: { persistSession: false } });
 let fouten = 0;

@@ -11,7 +11,7 @@
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "rooktest": "node --env-file=.env.local scripts/rooktest.mjs",
+    "rooktest": "node --env-file=.env.production.local scripts/rooktest.mjs",
     "schema:supabase": "supabase db query --remote -f supabase/schema.sql"
   },
   "dependencies": {

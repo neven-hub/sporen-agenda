@@ -38,3 +38,30 @@ export function kortLabel(s: string): string {
   const d = uitIso(s);
   return `${d.getDate()} ${maanden[d.getMonth()].slice(0, 3)}`;
 }
+
+export function eersteVanMaand(s: string): string {
+  return `${s.slice(0, 7)}-01`;
+}
+
+export function plusMaanden(s: string, n: number): string {
+  const d = uitIso(eersteVanMaand(s));
+  d.setMonth(d.getMonth() + n);
+  return iso(d);
+}
+
+export function maandLabel(s: string): string {
+  const d = uitIso(s);
+  return `${maanden[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** Alle dagen van de maandkalender: van de maandag vóór de 1e tot de zondag na de laatste. */
+export function maandRaster(s: string): string[] {
+  const eerste = eersteVanMaand(s);
+  const volgende = plusMaanden(eerste, 1);
+  const start = maandagVan(eerste);
+  const dagen: string[] = [];
+  for (let d = start; d < volgende || dagen.length % 7 !== 0; d = plusDagen(d, 1)) dagen.push(d);
+  return dagen;
+}
+
+export const dagKort = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];

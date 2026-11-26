@@ -3,7 +3,7 @@ import { Sessie, type OntbrekendeToegang } from './kluis/sessie';
 import type { Afspraak, AfspraakInhoud, Rol, Ruimte, Uitnodiging } from './kluis/model';
 import { DemoOpslag } from './opslag/demo';
 import { DEMO_GEBRUIKERS, DEMO_WACHTWOORD, kiesOpslag, vulDemo } from './opslag/kies';
-import { dagLabel, kortLabel, maandagVan, plusDagen, vandaag } from './datum';
+import { dagKort, dagLabel, eersteVanMaand, kortLabel, maandagVan, maandLabel, maandRaster, plusDagen, plusMaanden, vandaag } from './datum';
 
 const opslag = kiesOpslag();
 const isDemo = opslag.modus === 'demo';
@@ -271,6 +271,23 @@ type Filter = 'alles' | Ruimte['soort'] | `jongere:${string}`;
 
 function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void }) {
   const [week, setWeek] = useState(maandagVan(vandaag()));
+  const [weergave, setWeergaveState] = useState<'week' | 'maand'>(() => {
+    try {
+      return localStorage.getItem('agenda-weergave') === 'maand' ? 'maand' : 'week';
+    } catch {
+      return 'week';
+    }
+  });
+  const [maand, setMaand] = useState(eersteVanMaand(vandaag()));
+  const [gekozenDag, setGekozenDag] = useState(vandaag());
+  const setWeergave = (w: 'week' | 'maand') => {
+    setWeergaveState(w);
+    try {
+      localStorage.setItem('agenda-weergave', w);
+    } catch {
+      /* geen opslag: dan onthouden we het niet */
+    }
+  };
   const [afspraken, setAfspraken] = useState<Afspraak[]>([]);
   const [filter, setFilter] = useState<Filter>('alles');
   const [bewerk, setBewerk] = useState<{ afspraak?: Afspraak; datum: string } | null>(null);
@@ -370,20 +387,44 @@ function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void
 
           <div className="ag-balk">
             <div className="ag-rij">
-              <button className="sp-knop sp-knop--klein sp-knop--rand" onClick={() => setWeek(plusDagen(week, -7))} aria-label="Vorige week">
+              <div className="ag-wissel" role="group" aria-label="Weergave">
+                <button className={weergave === 'week' ? 'ag-wissel--aan' : ''} aria-pressed={weergave === 'week'} onClick={() => setWeergave('week')}>
+                  Week
+                </button>
+                <button className={weergave === 'maand' ? 'ag-wissel--aan' : ''} aria-pressed={weergave === 'maand'} onClick={() => setWeergave('maand')}>
+                  Maand
+                </button>
+              </div>
+              <button
+                className="sp-knop sp-knop--klein sp-knop--rand"
+                onClick={() => (weergave === 'week' ? setWeek(plusDagen(week, -7)) : setMaand(plusMaanden(maand, -1)))}
+                aria-label={weergave === 'week' ? 'Vorige week' : 'Vorige maand'}
+              >
                 ‹
               </button>
-              <strong className="ag-week">
-                {kortLabel(dagen[0])} – {kortLabel(dagen[6])}
-              </strong>
-              <button className="sp-knop sp-knop--klein sp-knop--rand" onClick={() => setWeek(plusDagen(week, 7))} aria-label="Volgende week">
+              <strong className="ag-week">{weergave === 'week' ? `${kortLabel(dagen[0])} – ${kortLabel(dagen[6])}` : maandLabel(maand)}</strong>
+              <button
+                className="sp-knop sp-knop--klein sp-knop--rand"
+                onClick={() => (weergave === 'week' ? setWeek(plusDagen(week, 7)) : setMaand(plusMaanden(maand, 1)))}
+                aria-label={weergave === 'week' ? 'Volgende week' : 'Volgende maand'}
+              >
                 ›
               </button>
-              <button className="sp-knop sp-knop--klein sp-knop--plat" onClick={() => setWeek(maandagVan(vandaag()))}>
+              <button
+                className="sp-knop sp-knop--klein sp-knop--plat"
+                onClick={() => {
+                  setWeek(maandagVan(vandaag()));
+                  setMaand(eersteVanMaand(vandaag()));
+                  setGekozenDag(vandaag());
+                }}
+              >
                 Vandaag
               </button>
             </div>
-            <button className="sp-knop" onClick={() => setBewerk({ datum: dagen.includes(vandaag()) ? vandaag() : dagen[0] })}>
+            <button
+              className="sp-knop"
+              onClick={() => setBewerk({ datum: weergave === 'maand' ? gekozenDag : dagen.includes(vandaag()) ? vandaag() : dagen[0] })}
+            >
               + Afspraak
             </button>
           </div>
@@ -396,36 +437,41 @@ function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void
             ))}
           </div>
 
-          <ol className="ag-dagen">
-            {dagen.map((d) => {
-              const lijst = zichtbaar.filter((a) => a.datum === d);
-              return (
-                <li key={d} className={`ag-dag ${d === vandaag() ? 'ag-dag--vandaag' : ''}`}>
-                  <div className="ag-dagkop">
-                    <span>{dagLabel(d)}</span>
-                    <button className="ag-plus" onClick={() => setBewerk({ datum: d })} aria-label={`Afspraak op ${dagLabel(d)}`}>
-                      +
-                    </button>
-                  </div>
-                  {lijst.length === 0 ? (
-                    <p className="ag-leeg">—</p>
-                  ) : (
-                    lijst.map((a) => (
-                      <button key={a.id} className={`ag-item ag-item--${a.ruimte.soort}`} onClick={() => setBewerk({ afspraak: a, datum: a.datum })}>
-                        <span className="ag-tijd">{a.van ? `${a.van}${a.tot ? `–${a.tot}` : ''}` : 'hele dag'}</span>
-                        <span className="ag-titel">{a.titel}</span>
-                        <span className="ag-meta">
-                          <span className={`ag-label ag-label--${a.ruimte.soort}`}>{soortLabel(a.ruimte, sessie)}</span>
-                          {a.plaats && <span>{a.plaats}</span>}
-                          {a.auteur && a.auteur.id !== sessie.profiel.id && <span className="ag-zacht">door {a.auteur.initialen}</span>}
-                        </span>
+          {weergave === 'week' ? (
+            <ol className="ag-dagen">
+              {dagen.map((d) => {
+                const lijst = zichtbaar.filter((a) => a.datum === d);
+                return (
+                  <li key={d} className={`ag-dag ${d === vandaag() ? 'ag-dag--vandaag' : ''}`}>
+                    <div className="ag-dagkop">
+                      <span>{dagLabel(d)}</span>
+                      <button className="ag-plus" onClick={() => setBewerk({ datum: d })} aria-label={`Afspraak op ${dagLabel(d)}`}>
+                        +
                       </button>
-                    ))
-                  )}
-                </li>
-              );
-            })}
-          </ol>
+                    </div>
+                    {lijst.length === 0 ? (
+                      <p className="ag-leeg">—</p>
+                    ) : (
+                      lijst.map((a) => <AfspraakKaart key={a.id} a={a} sessie={sessie} onKlik={() => setBewerk({ afspraak: a, datum: a.datum })} />)
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <Maand
+              maand={maand}
+              afspraken={zichtbaar}
+              gekozen={gekozenDag}
+              sessie={sessie}
+              onKiesDag={(d) => {
+                setGekozenDag(d);
+                if (d.slice(0, 7) !== maand.slice(0, 7)) setMaand(eersteVanMaand(d));
+              }}
+              onNieuw={(d) => setBewerk({ datum: d })}
+              onOpen={(a) => setBewerk({ afspraak: a, datum: a.datum })}
+            />
+          )}
 
           <Legende sessie={sessie} />
         </main>
@@ -844,5 +890,125 @@ function WachtwoordVenster({ sessie, onDicht }: { sessie: Sessie; onDicht: () =>
         </div>
       </form>
     </div>
+  );
+}
+
+// ── Afspraak in een lijst ────────────────────────────────────────────────────
+
+function AfspraakKaart({ a, sessie, onKlik }: { a: Afspraak; sessie: Sessie; onKlik: () => void }) {
+  return (
+    <button className={`ag-item ag-item--${a.ruimte.soort}`} onClick={onKlik}>
+      <span className="ag-tijd">{a.van ? `${a.van}${a.tot ? `–${a.tot}` : ''}` : 'hele dag'}</span>
+      <span className="ag-titel">{a.titel}</span>
+      <span className="ag-meta">
+        <span className={`ag-label ag-label--${a.ruimte.soort}`}>{soortLabel(a.ruimte, sessie)}</span>
+        {a.plaats && <span>{a.plaats}</span>}
+        {a.auteur && a.auteur.id !== sessie.profiel.id && <span className="ag-zacht">door {a.auteur.initialen}</span>}
+      </span>
+    </button>
+  );
+}
+
+// ── Maandweergave ────────────────────────────────────────────────────────────
+
+const MAX_PER_DAG = 3;
+
+function Maand({
+  maand,
+  afspraken,
+  gekozen,
+  sessie,
+  onKiesDag,
+  onNieuw,
+  onOpen,
+}: {
+  maand: string;
+  afspraken: Afspraak[];
+  gekozen: string;
+  sessie: Sessie;
+  onKiesDag: (d: string) => void;
+  onNieuw: (d: string) => void;
+  onOpen: (a: Afspraak) => void;
+}) {
+  const raster = maandRaster(maand);
+  const perDag = new Map<string, Afspraak[]>();
+  for (const a of afspraken) perDag.set(a.datum, [...(perDag.get(a.datum) ?? []), a]);
+  const vandaagIso = vandaag();
+  const lijstGekozen = perDag.get(gekozen) ?? [];
+
+  return (
+    <>
+      <div className="ag-maand" role="grid" aria-label={maandLabel(maand)}>
+        {dagKort.map((d) => (
+          <div key={d} className="ag-maand-kop" role="columnheader">
+            {d}
+          </div>
+        ))}
+        {raster.map((d) => {
+          const lijst = perDag.get(d) ?? [];
+          const klassen = [
+            'ag-maand-dag',
+            d.slice(0, 7) !== maand.slice(0, 7) && 'ag-maand-dag--buiten',
+            d === vandaagIso && 'ag-maand-dag--vandaag',
+            d === gekozen && 'ag-maand-dag--gekozen',
+          ]
+            .filter(Boolean)
+            .join(' ');
+          return (
+            <div
+              key={d}
+              role="gridcell"
+              aria-selected={d === gekozen}
+              aria-label={`${dagLabel(d)}, ${lijst.length} ${lijst.length === 1 ? 'afspraak' : 'afspraken'}`}
+              tabIndex={d === gekozen ? 0 : -1}
+              className={klassen}
+              onClick={() => onKiesDag(d)}
+              onDoubleClick={() => onNieuw(d)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') onNieuw(d);
+                const stap = ({ ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 } as Record<string, number>)[e.key];
+                if (stap) {
+                  e.preventDefault();
+                  onKiesDag(plusDagen(d, stap));
+                }
+              }}
+            >
+              <span className="ag-maand-nr">{Number(d.slice(8))}</span>
+              <span className="ag-maand-items">
+                {lijst.slice(0, MAX_PER_DAG).map((a) => (
+                  <button
+                    key={a.id}
+                    className={`ag-maand-item ag-maand-item--${a.ruimte.soort}`}
+                    title={`${a.van ? a.van + ' ' : ''}${a.titel}`}
+                    tabIndex={-1}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpen(a);
+                    }}
+                  >
+                    {a.van && <span className="ag-maand-tijd">{a.van}</span>} {a.titel}
+                  </button>
+                ))}
+                {lijst.length > MAX_PER_DAG && <span className="ag-maand-meer">+{lijst.length - MAX_PER_DAG} meer</span>}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <section className="ag-dag ag-maand-lijst" aria-live="polite">
+        <div className="ag-dagkop">
+          <span>{dagLabel(gekozen)}</span>
+          <button className="ag-plus" onClick={() => onNieuw(gekozen)} aria-label={`Afspraak op ${dagLabel(gekozen)}`}>
+            +
+          </button>
+        </div>
+        {lijstGekozen.length === 0 ? (
+          <p className="ag-leeg ag-leeg--tekst">Geen afspraken. Dubbelklik op een dag of gebruik + om er een te maken.</p>
+        ) : (
+          lijstGekozen.map((a) => <AfspraakKaart key={a.id} a={a} sessie={sessie} onKlik={() => onOpen(a)} />)
+        )}
+      </section>
+    </>
   );
 }
