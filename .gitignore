@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.local
+.env
+.env.*
+!.env.voorbeeld
+*.tsbuildinfo
+# Nooit echte agendagegevens of exports in git
+*.json.export

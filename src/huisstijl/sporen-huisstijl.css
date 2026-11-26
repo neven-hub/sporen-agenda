@@ -1,0 +1,409 @@
+/*
+ * Huisstijl Sporen — voor de eigen hulpmiddelen (Roosterhulp, Leefgroepkas, …)
+ *
+ * Afgeleid van www.sporen.be (november 2026): Open Sans, donkergrijze tekst,
+ * vier merkkleuren en de kenmerkende kleurbalk in die vier kleuren. Herkenbaar
+ * voor iedereen die de site kent — dat maakt een nieuw hulpmiddel sneller
+ * vertrouwd.
+ *
+ * Gebruik: dit bestand laden vóór de eigen stijl van het project. Alles begint
+ * met "sp-" (klassen) of "--sp-" (variabelen), zodat het nergens botst.
+ * Het logo zit hier (nog) niet in.
+ *
+ * Toegankelijkheid: turquoise en oranje zijn te licht voor witte tekst in
+ * gewone grootte. Daarom zijn gewone knoppen en links donkergroen; turquoise
+ * en oranje dienen voor accenten, grote knoppen in hoofdletters en de kleurbalk.
+ */
+
+/* ── Lettertype (meegeleverd, werkt zonder internet) ─────────────────────── */
+
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('./lettertype/open-sans-latin-wght-normal.woff2') format('woff2-variations');
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: italic;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('./lettertype/open-sans-latin-wght-italic.woff2') format('woff2-variations');
+}
+
+/* ── Kleuren en maten ────────────────────────────────────────────────────── */
+
+:root {
+  /* Merkkleuren (zoals op sporen.be) */
+  --sp-turquoise: #19afb1;
+  --sp-groen: #036d65;
+  --sp-groen-diep: #025751;
+  --sp-geel: #f6d453;
+  --sp-oranje: #f09743;
+
+  /* Neutraal */
+  --sp-tekst: #3a3a3a;
+  --sp-tekst-zacht: #6b6b6b;
+  --sp-vlak: #f0f0f0;
+  --sp-lijn: #d6d6d6;
+  --sp-wit: #ffffff;
+
+  /* Lichte tinten van de merkkleuren, voor achtergronden */
+  --sp-turquoise-licht: #e3f5f5;
+  --sp-groen-licht: #e1efed;
+  --sp-geel-licht: #fdf5d6;
+  --sp-oranje-licht: #fdeedf;
+
+  /* Betekenis */
+  --sp-goed: #1f7a47;
+  --sp-goed-licht: #e5f3ea;
+  --sp-fout: #b42318;
+  --sp-fout-licht: #fdecea;
+  --sp-let-op: #8a6100;
+  --sp-let-op-licht: var(--sp-geel-licht);
+
+  /* De kleurbalk: vier gelijke stukken, herhaald */
+  --sp-kleurbalk: linear-gradient(
+    90deg,
+    var(--sp-turquoise) 0 25%,
+    var(--sp-groen) 25% 50%,
+    var(--sp-geel) 50% 75%,
+    var(--sp-oranje) 75% 100%
+  );
+
+  /* Typografie */
+  --sp-letter: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+  --sp-letter-citaat: Georgia, 'Times New Roman', serif;
+
+  /* Vormen: sporen.be gebruikt rechte hoeken */
+  --sp-hoek: 0;
+  --sp-hoek-klein: 2px;
+  --sp-schaduw: 0 1px 3px rgb(0 0 0 / 0.08);
+  --sp-schaduw-hoog: 0 10px 30px rgb(0 0 0 / 0.18);
+}
+
+/* ── Basis ───────────────────────────────────────────────────────────────── */
+
+.sp,
+.sp-pagina {
+  font-family: var(--sp-letter);
+  color: var(--sp-tekst);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.sp-pagina {
+  margin: 0;
+  background: var(--sp-wit);
+}
+.sp h1,
+.sp h2,
+.sp h3,
+.sp-pagina h1,
+.sp-pagina h2,
+.sp-pagina h3 {
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--sp-tekst);
+}
+.sp a,
+.sp-pagina a {
+  color: var(--sp-groen);
+}
+.sp a:hover,
+.sp-pagina a:hover {
+  color: var(--sp-groen-diep);
+}
+
+/* ── De kleurbalk ────────────────────────────────────────────────────────── */
+
+/* Band over de hele breedte, bovenaan en onderaan een pagina */
+.sp-kleurbalk {
+  height: 8px;
+  background: var(--sp-kleurbalk);
+  background-size: 200px 100%;
+}
+
+/* Titel met het streepje eronder, zoals elke titel op sporen.be */
+.sp-titel::after {
+  content: '';
+  display: block;
+  width: 200px;
+  max-width: 100%;
+  height: 3px;
+  margin-top: 0.6rem;
+  background: var(--sp-kleurbalk);
+}
+.sp-titel--midden {
+  text-align: center;
+}
+.sp-titel--midden::after {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Knoppen ─────────────────────────────────────────────────────────────── */
+
+.sp-knop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  font-family: var(--sp-letter);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.6rem 1.15rem;
+  border: 2px solid var(--sp-groen);
+  border-radius: var(--sp-hoek);
+  background: var(--sp-groen);
+  color: var(--sp-wit);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.12s, border-color 0.12s;
+}
+.sp-knop:hover:not(:disabled) {
+  background: var(--sp-groen-diep);
+  border-color: var(--sp-groen-diep);
+  color: var(--sp-wit);
+}
+.sp-knop:focus-visible {
+  outline: 3px solid var(--sp-geel);
+  outline-offset: 2px;
+}
+.sp-knop:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* Grote oproep, zoals "ONZE MISSIE EN VISIE" en "STEUN SPOREN" */
+.sp-knop--groot {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  padding: 0.85rem 1.6rem;
+}
+.sp-knop--turquoise {
+  background: var(--sp-turquoise);
+  border-color: var(--sp-turquoise);
+}
+.sp-knop--turquoise:hover:not(:disabled) {
+  background: #13999b;
+  border-color: #13999b;
+}
+.sp-knop--oranje {
+  background: var(--sp-oranje);
+  border-color: var(--sp-oranje);
+}
+.sp-knop--oranje:hover:not(:disabled) {
+  background: #e0812b;
+  border-color: #e0812b;
+}
+/* Rustig: grijs vlak, zoals de tweede knoppen op de site */
+.sp-knop--zacht {
+  background: var(--sp-vlak);
+  border-color: var(--sp-vlak);
+  color: var(--sp-tekst);
+}
+.sp-knop--zacht:hover:not(:disabled) {
+  background: #e3e3e3;
+  border-color: #e3e3e3;
+  color: var(--sp-tekst);
+}
+.sp-knop--rand {
+  background: transparent;
+  color: var(--sp-groen);
+}
+.sp-knop--rand:hover:not(:disabled) {
+  background: var(--sp-groen-licht);
+  border-color: var(--sp-groen);
+  color: var(--sp-groen-diep);
+}
+.sp-knop--plat {
+  background: transparent;
+  border-color: transparent;
+  color: var(--sp-groen);
+}
+.sp-knop--plat:hover:not(:disabled) {
+  background: var(--sp-groen-licht);
+  border-color: transparent;
+  color: var(--sp-groen-diep);
+}
+.sp-knop--gevaar {
+  background: var(--sp-wit);
+  border-color: #efb4ae;
+  color: var(--sp-fout);
+}
+.sp-knop--gevaar:hover:not(:disabled) {
+  background: var(--sp-fout-licht);
+  border-color: var(--sp-fout);
+  color: var(--sp-fout);
+}
+.sp-knop--klein {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.65rem;
+}
+
+/* ── Kaarten en vlakken ──────────────────────────────────────────────────── */
+
+.sp-kaart {
+  background: var(--sp-wit);
+  border: 1px solid var(--sp-lijn);
+  border-radius: var(--sp-hoek-klein);
+  padding: 1.1rem 1.3rem;
+}
+.sp-kaart--accent {
+  border-top: 4px solid var(--sp-turquoise);
+}
+.sp-vlak {
+  background: var(--sp-vlak);
+  padding: 1.1rem 1.3rem;
+}
+
+/* ── Formulieren ─────────────────────────────────────────────────────────── */
+
+.sp-veld {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--sp-tekst);
+}
+.sp-veld input,
+.sp-veld select,
+.sp-veld textarea,
+.sp-invoer {
+  font: inherit;
+  font-weight: 400;
+  font-size: 1rem;
+  color: var(--sp-tekst);
+  background: var(--sp-wit);
+  border: 1px solid #bdbdbd;
+  border-radius: var(--sp-hoek);
+  padding: 0.55rem 0.7rem;
+}
+.sp-veld input:focus,
+.sp-veld select:focus,
+.sp-veld textarea:focus,
+.sp-invoer:focus {
+  outline: 2px solid var(--sp-turquoise);
+  outline-offset: -1px;
+  border-color: var(--sp-turquoise);
+}
+
+/* ── Tabellen ────────────────────────────────────────────────────────────── */
+
+.sp-tabel {
+  width: 100%;
+  border-collapse: collapse;
+}
+.sp-tabel th {
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sp-groen);
+  border-bottom: 2px solid var(--sp-groen);
+  padding: 0.45rem 0.55rem;
+}
+.sp-tabel td {
+  border-bottom: 1px solid #e6e6e6;
+  padding: 0.5rem 0.55rem;
+}
+.sp-tabel tbody tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+/* ── Tabbladen (zoals het hoofdmenu van de site) ─────────────────────────── */
+
+.sp-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--sp-lijn);
+}
+.sp-tab {
+  font: inherit;
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  padding: 0.6rem 1rem;
+  color: var(--sp-tekst);
+  cursor: pointer;
+}
+.sp-tab:hover {
+  color: var(--sp-groen);
+}
+.sp-tab--actief {
+  color: var(--sp-groen);
+  border-bottom-color: var(--sp-turquoise);
+}
+
+/* ── Meldingen ───────────────────────────────────────────────────────────── */
+
+.sp-melding {
+  border-left: 5px solid var(--sp-turquoise);
+  background: var(--sp-turquoise-licht);
+  padding: 0.7rem 1rem;
+}
+.sp-melding--goed {
+  border-color: var(--sp-goed);
+  background: var(--sp-goed-licht);
+}
+.sp-melding--fout {
+  border-color: var(--sp-fout);
+  background: var(--sp-fout-licht);
+  color: var(--sp-fout);
+}
+.sp-melding--let-op {
+  border-color: var(--sp-geel);
+  background: var(--sp-let-op-licht);
+}
+
+/* ── Tekstelementen ──────────────────────────────────────────────────────── */
+
+/* Opsomming met gele vierkantjes */
+.sp-lijst {
+  list-style: none;
+  padding-left: 0;
+}
+.sp-lijst li {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-bottom: 0.4rem;
+}
+.sp-lijst li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.6em;
+  height: 0.6em;
+  background: var(--sp-geel);
+}
+
+/* Citaat: cursief, oranje, met een grijze balk links */
+.sp-citaat {
+  font-family: var(--sp-letter-citaat);
+  font-style: italic;
+  color: var(--sp-oranje);
+  border-left: 6px solid var(--sp-vlak);
+  padding: 0.3rem 0 0.3rem 1.5rem;
+  margin: 0;
+  line-height: 1.7;
+}
+
+/* Klein etiket, bv. "voorbeeld" of een status */
+.sp-etiket {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  background: var(--sp-groen-licht);
+  color: var(--sp-groen);
+}

@@ -1,0 +1,417 @@
+/* Agenda — eigen opmaak bovenop de huisstijl van Sporen. Mobiel eerst. */
+
+:root {
+  /* Kleur per soort agenda (zelfde in label, rand en legende) */
+  --ag-team: var(--sp-groen);
+  --ag-team-licht: var(--sp-groen-licht);
+  --ag-begeleiding: #0e8a8c; /* turquoise, donker genoeg voor tekst */
+  --ag-begeleiding-licht: var(--sp-turquoise-licht);
+  --ag-gedeeld: #b5600f; /* oranje, donker genoeg voor tekst */
+  --ag-gedeeld-licht: var(--sp-oranje-licht);
+  --ag-prive: #5c5c5c;
+  --ag-prive-licht: var(--sp-vlak);
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--sp-wit);
+}
+.ag {
+  font-family: var(--sp-letter);
+  color: var(--sp-tekst);
+  min-height: 100vh;
+}
+.ag h1,
+.ag h2,
+.ag h3 {
+  font-weight: 600;
+  margin: 0 0 0.6rem;
+}
+.ag h2 {
+  font-size: 1.15rem;
+}
+.ag h3 {
+  font-size: 1rem;
+  margin-top: 1rem;
+}
+.ag-zacht {
+  color: var(--sp-tekst-zacht);
+  font-weight: 400;
+}
+.ag-demo {
+  background: var(--sp-geel-licht);
+  color: var(--sp-let-op);
+  font-size: 0.85rem;
+  padding: 0.4rem 16px;
+  text-align: center;
+}
+.ag-rij {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ag-rij--velden {
+  align-items: flex-end;
+}
+.ag-rij--velden > .sp-veld {
+  flex: 1 1 8rem;
+}
+.ag-rij--knoppen {
+  margin-top: 1rem;
+}
+.ag-vul {
+  flex: 1;
+}
+.ag-onder {
+  margin-bottom: 0.15rem;
+}
+.ag-link {
+  background: none;
+  border: none;
+  color: var(--sp-groen);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.5rem 0 0;
+}
+.ag-code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 1.1em;
+  letter-spacing: 0.06em;
+}
+
+/* ── Aanmelden ──────────────────────────────────────────────────────────── */
+
+.ag-aanmelden {
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 1.5rem 16px 3rem;
+}
+.ag-demo-knoppen {
+  margin: 1rem 0 1.5rem;
+}
+.ag-formulier {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: 1.2rem;
+}
+.ag-formulier .sp-melding {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ── Agenda ─────────────────────────────────────────────────────────────── */
+
+.ag-scherm {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 0 16px 3rem;
+}
+.ag-kop {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--sp-lijn);
+  margin-bottom: 1rem;
+}
+.ag-kop strong {
+  font-size: 1.2rem;
+}
+.ag-teller {
+  background: var(--sp-oranje);
+  color: var(--sp-wit);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  min-width: 1.3rem;
+  padding: 0 0.35rem;
+  line-height: 1.3rem;
+  text-align: center;
+}
+.ag-scherm .sp-melding {
+  font-size: 0.92rem;
+  margin: 0 0 1rem;
+}
+.ag-balk {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+.ag-week {
+  min-width: 8.5rem;
+  text-align: center;
+}
+.ag-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.ag-chip {
+  font: inherit;
+  font-size: 0.88rem;
+  border: 1px solid var(--sp-lijn);
+  background: var(--sp-wit);
+  color: var(--sp-tekst);
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ag-chip--aan {
+  background: var(--sp-groen);
+  border-color: var(--sp-groen);
+  color: var(--sp-wit);
+}
+.ag-chip:focus-visible,
+.ag-item:focus-visible,
+.ag-plus:focus-visible {
+  outline: 3px solid var(--sp-geel);
+  outline-offset: 2px;
+}
+
+.ag-dagen {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.ag-dag {
+  border-top: 1px solid var(--sp-lijn);
+  padding-top: 0.4rem;
+}
+.ag-dagkop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--sp-tekst-zacht);
+}
+.ag-dagkop span::first-letter {
+  text-transform: uppercase;
+}
+.ag-dag--vandaag .ag-dagkop {
+  color: var(--sp-groen);
+}
+.ag-dag--vandaag .ag-dagkop span::after {
+  content: ' · vandaag';
+}
+.ag-plus {
+  background: none;
+  border: 1px solid var(--sp-lijn);
+  color: var(--sp-groen);
+  width: 1.9rem;
+  height: 1.9rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+  border-radius: var(--sp-hoek-klein);
+}
+.ag-leeg {
+  margin: 0.2rem 0 0;
+  color: var(--sp-lijn);
+}
+.ag-item {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: 0.1rem 0.8rem;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--sp-wit);
+  border: 1px solid var(--sp-lijn);
+  border-left: 5px solid var(--ag-prive);
+  padding: 0.55rem 0.8rem;
+  margin-top: 0.4rem;
+  cursor: pointer;
+}
+.ag-item:hover {
+  background: var(--sp-vlak);
+}
+.ag-item--team {
+  border-left-color: var(--ag-team);
+}
+.ag-item--begeleiding {
+  border-left-color: var(--ag-begeleiding);
+}
+.ag-item--gedeeld {
+  border-left-color: var(--ag-gedeeld);
+}
+.ag-tijd {
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-tekst-zacht);
+  font-size: 0.9rem;
+  grid-row: span 2;
+}
+.ag-titel {
+  font-weight: 600;
+}
+.ag-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  align-items: center;
+}
+.ag-label {
+  font-weight: 600;
+  padding: 0 0.4rem;
+  font-size: 0.78rem;
+}
+.ag-label--team {
+  color: var(--ag-team);
+  background: var(--ag-team-licht);
+}
+.ag-label--begeleiding {
+  color: var(--ag-begeleiding);
+  background: var(--ag-begeleiding-licht);
+}
+.ag-label--gedeeld {
+  color: var(--ag-gedeeld);
+  background: var(--ag-gedeeld-licht);
+}
+.ag-label--prive {
+  color: var(--ag-prive);
+  background: var(--ag-prive-licht);
+}
+@media (max-width: 30rem) {
+  .ag-item {
+    grid-template-columns: 1fr;
+  }
+  .ag-tijd {
+    grid-row: auto;
+  }
+}
+
+.ag-legende {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  font-size: 0.85rem;
+  color: var(--sp-tekst-zacht);
+}
+.ag-stip {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -0.05rem;
+  background: var(--ag-prive);
+}
+.ag-stip--team {
+  background: var(--ag-team);
+}
+.ag-stip--begeleiding {
+  background: var(--ag-begeleiding);
+}
+.ag-stip--gedeeld {
+  background: var(--ag-gedeeld);
+}
+
+/* ── Venster ────────────────────────────────────────────────────────────── */
+
+.ag-achtergrond {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 16px;
+  overflow-y: auto;
+  z-index: 10;
+}
+.ag-venster {
+  width: 100%;
+  max-width: 34rem;
+  box-shadow: var(--sp-schaduw-hoog);
+}
+.ag-venster fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.ag-vink {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.92rem;
+}
+.ag-wie {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+.ag-wie-titel {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.ag-wie-keuze {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  border: 1px solid var(--sp-lijn);
+  border-left: 5px solid var(--ag-prive);
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+}
+.ag-wie-keuze input {
+  margin-top: 0.3rem;
+}
+.ag-wie-keuze span {
+  display: flex;
+  flex-direction: column;
+}
+.ag-wie-keuze small {
+  color: var(--sp-tekst-zacht);
+}
+.ag-wie-keuze--team {
+  border-left-color: var(--ag-team);
+}
+.ag-wie-keuze--begeleiding {
+  border-left-color: var(--ag-begeleiding);
+}
+.ag-wie-keuze--gedeeld {
+  border-left-color: var(--ag-gedeeld);
+}
+.ag-wie-keuze--aan {
+  background: var(--sp-vlak);
+}
+
+/* ── Beheer ─────────────────────────────────────────────────────────────── */
+
+.ag-beheer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.ag-lijst {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.ag-lijst .ag-rij {
+  justify-content: space-between;
+}
