@@ -1,4 +1,4 @@
-import type { AfspraakRij, Leefgroep, Profiel, Rol, Ruimte, SleutelRij, Uitnodiging } from '../kluis/model';
+import type { AfspraakRij, Leefgroep, NotitieRij, Profiel, Rol, Ruimte, SleutelRij, Uitnodiging } from '../kluis/model';
 
 /** Een nieuw profiel zonder id en leefgroep: die bepaalt de opslag. */
 export type NieuwProfiel = Omit<Profiel, 'id' | 'leefgroepId'>;
@@ -55,6 +55,11 @@ export interface Opslag {
   wijzigWachtwoord(oud: string, nieuw: string, materiaal: Pick<Profiel, 'priveSleutel' | 'zout'>): Promise<void>;
   /** Begeleider verwijdert een lid: account, profiel, eigen agenda's en sleutels. */
   verwijderLid(profielId: string): Promise<void>;
+
+  // ── Checklist en overdracht (alleen begeleiders, alleen in de teamruimte) ──
+  notities(ruimteId: string): Promise<NotitieRij[]>;
+  bewaarNotitie(rij: Omit<NotitieRij, 'id' | 'auteurId'> & { id?: string }): Promise<NotitieRij>;
+  verwijderNotitie(id: string): Promise<void>;
 }
 
 export class OpslagFout extends Error {}

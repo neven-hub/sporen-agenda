@@ -1,4 +1,4 @@
-import type { AfspraakRij, Leefgroep, Profiel, Rol, Ruimte, SleutelRij, Uitnodiging } from '../kluis/model';
+import type { AfspraakRij, Leefgroep, NotitieRij, Profiel, Rol, Ruimte, SleutelRij, Uitnodiging } from '../kluis/model';
 import { naarBase64 } from '../kluis/crypto';
 import { nieuweCode, normaliseerNaam, OpslagFout, type NieuwProfiel, type NieuwProfielMetCode, type Opslag } from './opslag';
 
@@ -13,6 +13,7 @@ interface Tabellen {
   afspraken: AfspraakRij[];
   uitnodigingen: Uitnodiging[];
   herstelcodes?: { code: string; profielId: string; vervalt: number }[];
+  notities?: NotitieRij[];
 }
 
 const leeg = (): Tabellen => ({
@@ -324,6 +325,45 @@ export class DemoOpslag implements Opslag {
     this.t.profielen = this.t.profielen.filter((p) => p.id !== profielId);
     this.t.gebruikers = this.t.gebruikers.filter((g) => g.id !== profielId);
     this.t.herstelcodes = (this.t.herstelcodes ?? []).filter((h) => h.profielId !== profielId);
+    this.bewaar();
+  }
+
+  // ── Checklist en overdracht ──
+
+  private eisTeam(ruimteId: string) {
+    const r = this.t.ruimtes.find((x) => x.id === ruimteId);
+    const p = this.t.profielen.find((x) => x.id === this.mij());
+    if (!r || r.soort !== 'team' || !p || p.rol !== 'begeleider' || !this.heeftSleutel(ruimteId))
+      throw new OpslagFout('Alleen voor begeleiders.');
+  }
+
+  async notities(ruimteId: string): Promise<NotitieRij[]> {
+    this.eisTeam(ruimteId);
+    return (this.t.notities ?? []).filter((n) => n.ruimteId === ruimteId);
+  }
+
+  async bewaarNotitie(rij: Omit<NotitieRij, 'id' | 'auteurId'> & { id?: string }): Promise<NotitieRij> {
+    this.eisTeam(rij.ruimteId);
+    const lijst = this.t.notities ?? [];
+    let nieuw: NotitieRij;
+    if (rij.id) {
+      const oud = lijst.find((n) => n.id === rij.id);
+      if (!oud) throw new OpslagFout('Niet gevonden.');
+      nieuw = { ...oud, ...rij, id: rij.id };
+      this.t.notities = lijst.map((n) => (n.id === rij.id ? nieuw : n));
+    } else {
+      nieuw = { ...rij, id: id(), auteurId: this.mij() };
+      this.t.notities = [...lijst, nieuw];
+    }
+    this.bewaar();
+    return nieuw;
+  }
+
+  async verwijderNotitie(nid: string): Promise<void> {
+    const n = (this.t.notities ?? []).find((x) => x.id === nid);
+    if (!n) return;
+    this.eisTeam(n.ruimteId);
+    this.t.notities = (this.t.notities ?? []).filter((x) => x.id !== nid);
     this.bewaar();
   }
 }

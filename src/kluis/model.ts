@@ -89,3 +89,41 @@ export function bewarenTot(datum: string, maanden = BEWAARTERMIJN_MAANDEN): stri
   const mm = (totaal % 12) + 1;
   return `${jj}-${String(mm).padStart(2, '0')}-01`;
 }
+
+// ── Alleen voor begeleiders (in de teamruimte) ──
+
+/** Een notitie staat zoals een afspraak in de opslag: versleuteld, met een grove bewaardatum. */
+export type NotitieRij = AfspraakRij;
+
+/** Een taak op de vaste dagchecklist. */
+export interface TaakInhoud {
+  soort: 'taak';
+  tekst: string;
+  volgorde: number;
+}
+
+/** Een taak die op een bepaalde dag is afgevinkt (wordt verwijderd bij uitvinken). */
+export interface AfvinkInhoud {
+  soort: 'afvink';
+  taakId: string;
+  /** YYYY-MM-DD */
+  datum: string;
+  door: string;
+  /** ISO-tijdstip */
+  om: string;
+}
+
+/** Een overdrachtsnotitie, eventueel tijdelijk (tot en met een datum). */
+export interface OverdrachtInhoud {
+  soort: 'overdracht';
+  tekst: string;
+  /** YYYY-MM-DD of leeg (blijft staan tot iemand ze verwijdert) */
+  tot: string;
+  belangrijk: boolean;
+  door: string;
+  om: string;
+}
+
+export type NotitieInhoud = TaakInhoud | AfvinkInhoud | OverdrachtInhoud;
+
+export type Notitie<T extends NotitieInhoud = NotitieInhoud> = T & { id: string };

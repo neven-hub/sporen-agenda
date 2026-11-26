@@ -221,3 +221,51 @@ describe('accounts beheren', () => {
     await expect(jo.verwijderLid(roId)).rejects.toThrow(/begeleiders/);
   });
 });
+
+describe('checklist en overdracht (alleen begeleiders)', () => {
+  it('taken en afvinkingen zijn gedeeld tussen begeleiders, per dag', async () => {
+    const { meld } = await opzet();
+    const ro = await meld('ro');
+    await ro.bewaarNotitie({ soort: 'taak', tekst: 'Medicatie klaarzetten', volgorde: 1 });
+    const taak = (await ro.notities()).find((n) => n.soort === 'taak')!;
+    await ro.bewaarNotitie({ soort: 'afvink', taakId: taak.id, datum: '2026-12-03', door: 'Ro', om: '2026-12-03T08:00:00Z' });
+    await ro.meldAf();
+    const an = await meld('an');
+    const n = await an.notities();
+    expect(n.some((x) => x.soort === 'taak' && x.tekst === 'Medicatie klaarzetten')).toBe(true);
+    const afvink = n.filter((x) => x.soort === 'afvink');
+    expect(afvink.map((x) => (x.soort === 'afvink' ? x.datum : ''))).toEqual(['2026-12-03']); // de volgende dag is er niets afgevinkt
+  });
+
+  it('overdracht zien alleen begeleiders; een jongere kan er niet bij', async () => {
+    const { meld, opslag } = await opzet();
+    const ro = await meld('ro');
+    await ro.bewaarNotitie({ soort: 'overdracht', tekst: 'Jo heeft hoofdpijn gehad', tot: '', belangrijk: true, door: 'Ro', om: '2026-12-03T20:00:00Z' });
+    const teamId = ro.ruimte('team')!.id;
+    await ro.meldAf();
+    const jo = await meld('jo');
+    await expect(jo.notities()).rejects.toThrow(/begeleiders/);
+    await expect(opslag.notities(teamId)).rejects.toThrow(/begeleiders/);
+    await jo.meldAf();
+    expect(JSON.stringify((opslag as unknown as { t: unknown }).t)).not.toContain('hoofdpijn');
+  });
+
+  it('na het verwijderen van een begeleider blijven checklist en overdracht leesbaar', async () => {
+    const { meld } = await opzet();
+    const ro = await meld('ro');
+    await ro.bewaarNotitie({ soort: 'overdracht', tekst: 'Sleutel bureau ligt in de kast', tot: '', belangrijk: false, door: 'Ro', om: '2026-12-03T20:00:00Z' });
+    const an = ro.profielen.find((p) => p.initialen === 'An')!;
+    await ro.verwijderLid(an.id);
+    await ro.meldAf();
+    const ro2 = await meld('ro');
+    expect((await ro2.notities()).some((n) => n.soort === 'overdracht' && n.tekst.includes('Sleutel bureau'))).toBe(true);
+  });
+
+  it('bewaartermijn per soort', async () => {
+    const { notitieBewarenTot } = await import('./sessie');
+    expect(notitieBewarenTot({ soort: 'taak', tekst: 'x', volgorde: 1 })).toBe('2999-12-31');
+    expect(notitieBewarenTot({ soort: 'afvink', taakId: 't', datum: '2026-12-03', door: 'Ro', om: '' })).toBe('2027-02-01');
+    expect(notitieBewarenTot({ soort: 'overdracht', tekst: 'x', tot: '2026-12-10', belangrijk: false, door: 'Ro', om: '' })).toBe('2027-02-01');
+    expect(notitieBewarenTot({ soort: 'overdracht', tekst: 'x', tot: '', belangrijk: false, door: 'Ro', om: '' }, '2026-12-03')).toBe('2027-07-01');
+  });
+});

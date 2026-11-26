@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { Sessie, type OntbrekendeToegang } from './kluis/sessie';
 import type { Afspraak, AfspraakInhoud, Rol, Ruimte, Uitnodiging } from './kluis/model';
 import { DemoOpslag } from './opslag/demo';
+import { Dag } from './Dag';
 import { DEMO_GEBRUIKERS, DEMO_WACHTWOORD, kiesOpslag, vulDemo } from './opslag/kies';
 import { dagKort, dagLabel, eersteVanMaand, kortLabel, maandagVan, maandLabel, maandRaster, plusDagen, plusMaanden, vandaag } from './datum';
 
@@ -291,7 +292,7 @@ function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void
   const [afspraken, setAfspraken] = useState<Afspraak[]>([]);
   const [filter, setFilter] = useState<Filter>('alles');
   const [bewerk, setBewerk] = useState<{ afspraak?: Afspraak; datum: string } | null>(null);
-  const [beheer, setBeheer] = useState(false);
+  const [scherm, setScherm] = useState<'agenda' | 'dag' | 'beheer'>('agenda');
   const [fout, setFout] = useState<string | null>(null);
   const [ontbreekt, setOntbreekt] = useState<OntbrekendeToegang[]>([]);
   const [wwVenster, setWwVenster] = useState(false);
@@ -346,12 +347,6 @@ function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void
           <span className="sp-etiket">
             {sessie.profiel.initialen} · {sessie.profiel.rol}
           </span>
-          {sessie.isBegeleider && (
-            <button className="sp-knop sp-knop--klein sp-knop--rand" onClick={() => setBeheer((b) => !b)}>
-              {beheer ? 'Naar de agenda' : 'Leefgroep beheren'}
-              {!beheer && ontbreekt.length > 0 && <span className="ag-teller">{new Set(ontbreekt.map((o) => o.profiel.id)).size}</span>}
-            </button>
-          )}
           <button className="sp-knop sp-knop--klein sp-knop--plat" onClick={() => setWwVenster(true)}>
             Wachtwoord
           </button>
@@ -367,10 +362,29 @@ function Agenda({ sessie, onAfmelden }: { sessie: Sessie; onAfmelden: () => void
         </div>
       </header>
 
+      {sessie.isBegeleider && (
+        <nav className="sp-tabs ag-hoofdtabs" aria-label="Onderdelen">
+          {(
+            [
+              ['agenda', 'Agenda'],
+              ['dag', 'Dag & overdracht'],
+              ['beheer', 'Leefgroep beheren'],
+            ] as const
+          ).map(([s, l]) => (
+            <button key={s} className={`sp-tab ${scherm === s ? 'sp-tab--actief' : ''}`} aria-current={scherm === s ? 'page' : undefined} onClick={() => setScherm(s)}>
+              {l}
+              {s === 'beheer' && ontbreekt.length > 0 && <span className="ag-teller">{new Set(ontbreekt.map((o) => o.profiel.id)).size}</span>}
+            </button>
+          ))}
+        </nav>
+      )}
+
       {fout && <p className="sp-melding sp-melding--fout">{fout}</p>}
 
-      {beheer && sessie.isBegeleider ? (
+      {scherm === 'beheer' && sessie.isBegeleider ? (
         <Beheer sessie={sessie} ontbreekt={ontbreekt} onKlaar={laad} />
+      ) : scherm === 'dag' && sessie.isBegeleider ? (
+        <Dag sessie={sessie} />
       ) : (
         <main>
           {!sessie.isBegeleider && (

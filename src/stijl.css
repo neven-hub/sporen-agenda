@@ -599,3 +599,136 @@ body {
     padding-left: 2px;
   }
 }
+
+/* ── Hoofdtabs (begeleiders) ────────────────────────────────────────────── */
+
+.ag-hoofdtabs {
+  margin: -0.4rem 0 1rem;
+}
+.ag-hoofdtabs .ag-teller {
+  margin-left: 0.35rem;
+  display: inline-block;
+}
+
+/* ── Dag & overdracht ───────────────────────────────────────────────────── */
+
+.ag-dag-kolommen {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 52rem) {
+  .ag-dag-kolommen {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+.ag-sectiekop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.ag-sectiekop h2 {
+  margin: 0;
+}
+.ag-klein {
+  font-size: 0.8rem;
+}
+.ag-dagkiezer {
+  margin-bottom: 0.6rem;
+}
+.ag-dagnaam {
+  min-width: 10rem;
+  text-align: center;
+}
+.ag-dagnaam::first-letter {
+  text-transform: uppercase;
+}
+.ag-voortgang {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--sp-groen);
+  font-weight: 600;
+}
+.ag-taken {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ag-taak {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--sp-vlak);
+}
+.ag-taak label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+.ag-taak input[type='checkbox'] {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: var(--sp-groen);
+  flex-shrink: 0;
+}
+.ag-taak--klaar .ag-taaktekst {
+  text-decoration: line-through;
+  color: var(--sp-tekst-zacht);
+}
+.ag-taak--beheer .sp-invoer {
+  flex: 1;
+  min-width: 0;
+}
+.ag-nieuwe-taak {
+  margin-top: 0.7rem;
+  flex-wrap: nowrap;
+}
+.ag-nieuwe-taak .sp-invoer {
+  flex: 1;
+  min-width: 0;
+}
+.ag-overdracht-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+.ag-datumveld {
+  width: auto;
+  padding: 0.3rem 0.5rem;
+}
+.ag-overdracht-lijst {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.ag-notitie {
+  border: 1px solid var(--sp-lijn);
+  border-left: 5px solid var(--sp-turquoise);
+  padding: 0.55rem 0.75rem;
+}
+.ag-notitie--belangrijk {
+  border-left-color: var(--sp-oranje);
+  background: var(--sp-oranje-licht);
+}
+.ag-notitie-tekst {
+  margin: 0 0 0.3rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ag-notitie-meta {
+  font-size: 0.82rem;
+}

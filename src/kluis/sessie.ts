@@ -17,6 +17,8 @@ import {
 } from './crypto';
 import {
   bewarenTot,
+  type Notitie,
+  type NotitieInhoud,
   type Afspraak,
   type AfspraakInhoud,
   type Leefgroep,
@@ -26,6 +28,17 @@ import {
   type Uitnodiging,
 } from './model';
 import { OpslagFout, type NieuwProfielMetCode, type Opslag } from '../opslag/opslag';
+
+/**
+ * Bewaartermijn per soort notitie: taken blijven (geen persoonsgegevens),
+ * afvinkingen een maand, overdracht tot een maand na de einddatum of anders
+ * zes maanden.
+ */
+export function notitieBewarenTot(n: NotitieInhoud, vandaagIso = new Date().toISOString().slice(0, 10)): string {
+  if (n.soort === 'taak') return '2999-12-31';
+  if (n.soort === 'afvink') return bewarenTot(n.datum, 1);
+  return n.tot ? bewarenTot(n.tot, 1) : bewarenTot(vandaagIso);
+}
 
 export interface OntbrekendeToegang {
   profiel: Profiel;
@@ -352,6 +365,17 @@ export class Sessie {
       }
       await this.opslag.bewaarAfspraak({ ...rij, inhoud: await versleutelJson(nieuw, inhoud) });
     }
+    if (r.soort === 'team') {
+      for (const rij of await this.opslag.notities(r.id)) {
+        let inhoud: NotitieInhoud;
+        try {
+          inhoud = await ontsleutelJson<NotitieInhoud>(oud, rij.inhoud);
+        } catch {
+          continue;
+        }
+        await this.opslag.bewaarNotitie({ id: rij.id, ruimteId: r.id, bewarenTot: rij.bewarenTot, inhoud: await versleutelJson(nieuw, inhoud) });
+      }
+    }
     for (const lid of verwachteLeden(r, this.profielen)) {
       await this.opslag.zetSleutel({ ruimteId: r.id, profielId: lid.id, ingepakt: await pakIn(nieuw, await importeerPubliek(lid.publiekeSleutel)) });
     }
@@ -381,5 +405,37 @@ export class Sessie {
   async meldAf(): Promise<void> {
     this.sleutels.clear();
     await this.opslag.meldAf();
+  }
+
+  // ── Checklist en overdracht (alleen begeleiders) ─────────────────────────
+
+  private teamRuimte(): Ruimte {
+    const r = this.ruimte('team');
+    if (!this.isBegeleider || !r || !this.heeftToegang(r.id)) throw new OpslagFout('Alleen voor begeleiders.');
+    return r;
+  }
+
+  async notities(): Promise<Notitie[]> {
+    const r = this.teamRuimte();
+    const k = this.sleutels.get(r.id)!;
+    const uit: Notitie[] = [];
+    for (const rij of await this.opslag.notities(r.id)) {
+      try {
+        uit.push({ ...(await ontsleutelJson<NotitieInhoud>(k, rij.inhoud)), id: rij.id });
+      } catch {
+        /* niet te openen: overslaan */
+      }
+    }
+    return uit;
+  }
+
+  async bewaarNotitie(inhoud: NotitieInhoud, id?: string): Promise<void> {
+    const r = this.teamRuimte();
+    const k = this.sleutels.get(r.id)!;
+    await this.opslag.bewaarNotitie({ id, ruimteId: r.id, inhoud: await versleutelJson(k, inhoud), bewarenTot: notitieBewarenTot(inhoud) });
+  }
+
+  async verwijderNotitie(id: string): Promise<void> {
+    await this.opslag.verwijderNotitie(id);
   }
 }

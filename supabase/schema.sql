@@ -66,6 +66,19 @@ create table if not exists public.uitnodigingen (
   vervalt          timestamptz not null default now() + interval '14 days'
 );
 
+-- Checklist en overdracht: alleen voor begeleiders, alleen in de teamruimte.
+-- Zelfde opbouw als afspraken: de inhoud (taak, afvinking of overdracht) is versleuteld.
+create table if not exists public.notities (
+  id           uuid primary key default gen_random_uuid(),
+  ruimte_id    uuid not null references public.ruimtes (id) on delete cascade,
+  auteur_id    uuid default auth.uid() references public.profielen (id) on delete set null,
+  inhoud       jsonb not null,
+  bewaren_tot  date not null,
+  aangemaakt   timestamptz not null default now(),
+  gewijzigd    timestamptz not null default now()
+);
+create index if not exists notities_ruimte on public.notities (ruimte_id);
+
 -- Herstelcodes voor wie zijn wachtwoord vergat (24 uur geldig, eenmalig).
 create table if not exists public.herstelcodes (
   code             text primary key,
@@ -125,7 +138,7 @@ $$;
 -- Wat ze per rij mogen, bepalen de regels (RLS) hieronder.
 revoke all on all tables in schema public from anon, authenticated;
 grant select, insert, update, delete on public.leefgroepen, public.ruimtes, public.sleutels,
-  public.afspraken, public.uitnodigingen to authenticated;
+  public.afspraken, public.uitnodigingen, public.notities to authenticated;
 
 -- ── Toegangsregels (RLS) ────────────────────────────────────────────────────
 
@@ -135,7 +148,8 @@ alter table public.ruimtes       enable row level security;
 alter table public.sleutels      enable row level security;
 alter table public.afspraken     enable row level security;
 alter table public.uitnodigingen enable row level security;
-alter table public.herstelcodes  enable row level security;  -- geen regels: alleen via functies
+alter table public.herstelcodes  enable row level security;
+alter table public.notities      enable row level security;  -- geen regels: alleen via functies
 
 -- Leefgroep: alleen je eigen.
 drop policy if exists leefgroep_lezen on public.leefgroepen;
@@ -224,6 +238,17 @@ create policy afspraak_verwijderen on public.afspraken for delete to authenticat
     and (auteur_id = auth.uid()
          or (public.ben_begeleider() and (select soort from public.ruimtes where id = ruimte_id) <> 'prive'))
   );
+
+-- Notities (checklist, overdracht): alleen begeleiders met de sleutel van de
+-- teamruimte, en alleen in de teamruimte.
+create or replace function public.is_teamruimte(p_ruimte uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.ruimtes where id = p_ruimte and soort = 'team')
+$$;
+drop policy if exists notitie_alles on public.notities;
+create policy notitie_alles on public.notities for all to authenticated
+  using (public.ben_begeleider() and public.is_teamruimte(ruimte_id) and public.heb_sleutel(ruimte_id))
+  with check (public.ben_begeleider() and public.is_teamruimte(ruimte_id) and public.heb_sleutel(ruimte_id));
 
 -- Uitnodigingen: alleen begeleiders van de leefgroep (maken gaat via maak_uitnodiging).
 drop policy if exists uitnodiging_lezen on public.uitnodigingen;
@@ -420,6 +445,7 @@ grant execute on function public.gebruik_herstelcode(text, text, jsonb, jsonb, t
 create or replace function public.ruim_op() returns void
 language sql security definer set search_path = '' as $$
   delete from public.afspraken where bewaren_tot <= current_date;
+  delete from public.notities where bewaren_tot <= current_date;
   delete from public.uitnodigingen where vervalt <= now();
   delete from public.herstelcodes where vervalt <= now();
 $$;

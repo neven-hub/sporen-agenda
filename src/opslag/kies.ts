@@ -48,6 +48,16 @@ export async function vulDemo(opslag: DemoOpslag): Promise<void> {
   await ro2.bewaar(a('JOVO teamoverleg', dag(1), '11:00', '13:00'), ro2.ruimte('team')!.id);
   await ro2.bewaar(a('Gesprek met consulent', dag(2), '10:00', '11:00', '', 'Ro gaat mee'), ro2.ruimte('begeleiding', li.id)!.id);
   await ro2.bewaar(a('Kerstfeestje leefgroep', dag(11), '17:00', '21:00', 'Living'), ro2.ruimte('gedeeld')!.id);
+  const taken = ['Post en briefjes nakijken', 'Medicatie klaarzetten', 'Kas tellen', 'Logboek bijwerken', 'Ramen en deuren nakijken bij vertrek'];
+  for (const [i, tekst] of taken.entries()) await ro2.bewaarNotitie({ soort: 'taak', tekst, volgorde: i + 1 });
+  await ro2.bewaarNotitie({
+    soort: 'overdracht',
+    tekst: 'Li: nieuwe afspraak met de consulent volgt, Ro belt terug.',
+    tot: plusDagen(vandaag(), 1),
+    belangrijk: true,
+    door: 'Ro',
+    om: new Date().toISOString(),
+  });
   await ro2.meldAf();
 
   const sJo = await Sessie.meldAan(opslag, 'jo', DEMO_WACHTWOORD);

@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AfspraakRij, Leefgroep, Profiel, Rol, Ruimte, SleutelRij, Uitnodiging } from '../kluis/model';
+import type { AfspraakRij, Leefgroep, NotitieRij, Profiel, Rol, Ruimte, SleutelRij, Uitnodiging } from '../kluis/model';
 import { normaliseerNaam, OpslagFout, type NieuwProfiel, type NieuwProfielMetCode, type Opslag } from './opslag';
 
 /**
@@ -261,6 +261,32 @@ export class SupabaseOpslag implements Opslag {
 
   async verwijderLid(profielId: string): Promise<void> {
     const { error } = await this.db.rpc('verwijder_lid', { p_profiel: profielId });
+    if (error) vertaal(error, 'Verwijderen lukte niet.');
+  }
+
+  // ── Checklist en overdracht ──
+
+  async notities(ruimteId: string): Promise<NotitieRij[]> {
+    const { data, error } = await this.db
+      .from('notities')
+      .select('id, ruimte_id, auteur_id, inhoud, bewaren_tot')
+      .eq('ruimte_id', ruimteId);
+    if (error) vertaal(error, 'Checklist en overdracht laden lukte niet.');
+    return data.map(uitAfspraak);
+  }
+
+  async bewaarNotitie(rij: Omit<NotitieRij, 'id' | 'auteurId'> & { id?: string }): Promise<NotitieRij> {
+    const velden = { ruimte_id: rij.ruimteId, inhoud: rij.inhoud, bewaren_tot: rij.bewarenTot };
+    const q = rij.id
+      ? this.db.from('notities').update({ ...velden, gewijzigd: new Date().toISOString() }).eq('id', rij.id)
+      : this.db.from('notities').insert(velden);
+    const { data, error } = await q.select('id, ruimte_id, auteur_id, inhoud, bewaren_tot').single();
+    if (error) vertaal(error, 'Bewaren lukte niet.');
+    return uitAfspraak(data);
+  }
+
+  async verwijderNotitie(id: string): Promise<void> {
+    const { error } = await this.db.from('notities').delete().eq('id', id);
     if (error) vertaal(error, 'Verwijderen lukte niet.');
   }
 }

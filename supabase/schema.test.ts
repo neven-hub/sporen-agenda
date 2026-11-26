@@ -268,6 +268,18 @@ describe('schema.sql in Postgres', () => {
     expect(r.map((x) => x.soort)).toEqual(['gedeeld', 'team']);
   });
 
+  it('notities (checklist/overdracht): alleen begeleiders, alleen in de teamruimte', async () => {
+    const n = (await een<{ id: string }>(an, `insert into public.notities (ruimte_id, inhoud, bewaren_tot) values ($1, '{}', '2999-12-31') returning id`, [team])).id;
+    expect((await als(an, `select id from public.notities`)).map((r) => r.id)).toContain(n);
+    // jongere: niets te zien, niets toe te voegen, ook niet in de eigen of gedeelde ruimte
+    expect(await als(jo, `select id from public.notities`)).toHaveLength(0);
+    await expect(als(jo, `insert into public.notities (ruimte_id, inhoud, bewaren_tot) values ($1, '{}', '2999-12-31')`, [joBeg])).rejects.toThrow(/row-level security/);
+    await expect(als(jo, `insert into public.notities (ruimte_id, inhoud, bewaren_tot) values ($1, '{}', '2999-12-31')`, [gedeeld])).rejects.toThrow(/row-level security/);
+    // begeleider: niet buiten de teamruimte
+    await expect(als(an, `insert into public.notities (ruimte_id, inhoud, bewaren_tot) values ($1, '{}', '2999-12-31')`, [gedeeld])).rejects.toThrow(/row-level security/);
+    await expect(als(null, `select * from public.notities`)).rejects.toThrow(/permission denied/);
+  });
+
   it('opruimen na de bewaartermijn', async () => {
     await db.query(`update public.afspraken set bewaren_tot = current_date - 1 where ruimte_id = $1`, [gedeeld]);
     await db.exec(`select public.ruim_op()`);

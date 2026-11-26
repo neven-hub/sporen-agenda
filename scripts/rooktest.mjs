@@ -16,7 +16,7 @@ const ok = (naam, voorwaarde, extra = '') => {
 };
 
 // 1. Niet aangemeld: geen tabellen, geen functies behalve herstellen
-for (const t of ['afspraken', 'profielen', 'sleutels', 'ruimtes', 'leefgroepen', 'uitnodigingen', 'herstelcodes']) {
+for (const t of ['afspraken', 'profielen', 'sleutels', 'ruimtes', 'leefgroepen', 'uitnodigingen', 'herstelcodes', 'notities']) {
   const { data, error } = await db.from(t).select('*').limit(1);
   ok(`anon leest ${t} niet`, !!error || (data ?? []).length === 0, error?.message ?? 'leeg');
 }
