@@ -28,6 +28,11 @@ Een begeleider kan ook iets plannen "voor Jo": dan zien Jo en de begeleiders het
   tot een agenda, krijgt zelfs de versleutelde rijen niet.
 - **Alleen initialen**, geen namen, geen e-mailadressen (de login is een
   gebruikersnaam).
+- **Bewuste keuze: niet alles is versleuteld.** De naam van de leefgroep, de
+  initialen, de rol (begeleider of jongere) en welke agenda's er bestaan, staan
+  leesbaar in de database. Supabase ziet die dus wel, de inhoud van afspraken
+  niet. Kies daarom een **neutrale leefgroepnaam**, zonder naam van de
+  organisatie of plaats (bv. "Groep 3" in plaats van een echte naam).
 - **Bewaartermijn**: afspraken worden automatisch verwijderd 6 maanden na de
   maand waarin ze vallen. Ongebruikte uitnodigingscodes vervallen na 14 dagen.
 - **Keerzijde**: wie zijn wachtwoord vergeet, verliest zijn privé-afspraken.
@@ -104,6 +109,8 @@ pnpm test
   (DPA) van Supabase is beschikbaar.
 - Initialen in een kleine leefgroep zijn **pseudoniem, niet anoniem**: de AVG
   blijft gelden, ook al is alles versleuteld.
+- Leefgroepnaam, initialen en rollen staan onversleuteld bij Supabase (de
+  afspraken zelf wel versleuteld). Aanvaardbaar, met een neutrale leefgroepnaam?
 - Bewaartermijn van 6 maanden: is dat goed?
 - Wachtwoord vergeten: hoe vangen we dat op (nieuw account, privé-afspraken weg)?
 - Later: overstap naar een server van Sporen zelf kan, de opslaglaag is los te

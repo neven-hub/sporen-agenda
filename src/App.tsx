@@ -193,7 +193,7 @@ function Aanmelden({ onSessie, melding }: { onSessie: (s: Sessie) => void; meldi
         )}
         {tab === 'start' && (
           <>
-            <Veld label="Naam van de leefgroep">
+            <Veld label="Naam van de leefgroep" hulp="Neutraal houden, zonder naam van de organisatie of plaats (bv. Groep 3). Deze naam is niet versleuteld.">
               <input className="sp-invoer" value={lgNaam} onChange={(e) => setLgNaam(e.target.value)} required maxLength={60} />
             </Veld>
             <Veld label="Jouw initialen" hulp="Geen volledige naam, bv. Ro.">
